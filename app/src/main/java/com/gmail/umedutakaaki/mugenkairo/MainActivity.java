@@ -42,6 +42,16 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+    private void set_save_enabled() {
+        if(main_view.get_view_mode() != MainView.VIEW_MODE_ORIGINAL && image_loaded) {
+			item_save.setEnabled(true);
+        }else{
+			item_save.setEnabled(false);
+        }
+
+    }
+
     private void set_arrow_del_enabled() {
         if(main_view.arrow_count() > 2) {
             item_arrow_del.setEnabled(true);
@@ -55,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
     MenuItem item_save;
     MenuItem item_arrow_add;
     MenuItem item_arrow_del;
+    MenuItem item_original;
     MenuItem item_composed;
     MenuItem item_masked;
     MenuItem item_mask;
@@ -67,13 +78,14 @@ public class MainActivity extends AppCompatActivity {
         item_save = menu.findItem(R.id.action_save);
         item_arrow_add = menu.findItem(R.id.action_arrow_add);
         item_arrow_del = menu.findItem(R.id.action_arrow_del);
+        item_original = menu.findItem(R.id.action_composed);
         item_composed = menu.findItem(R.id.action_composed);
         item_masked = menu.findItem(R.id.action_masked);
         item_mask = menu.findItem(R.id.action_mask);
         return true;
     }
 
-    private void show_message(String message){
+    public void show_message(String message){
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
@@ -93,12 +105,14 @@ public class MainActivity extends AppCompatActivity {
             case R.id.action_load:
                 load_image();
                 return true;
+            case R.id.action_original:
             case R.id.action_composed:
             case R.id.action_masked:
             case R.id.action_mask:
                 if(!item.isChecked()) {
                     main_view.set_view_mode(id);
                     item.setChecked(true);
+                    set_save_enabled();
                 }
                 return true;
             case R.id.action_arrow_add:
@@ -120,86 +134,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void save_image() {
-        Bitmap bmp = main_view.compose_result(true);
-        String ext, mime_type;
-        if(main_view.get_view_mode() == R.id.action_composed){
-            ext = ".jpg";
-            mime_type = "image/jpeg";
-        }else {
-            ext = ".png";
-            mime_type = "image/png";
-        }
-        if(bmp != null) {
-            try {
-                String save_dir = getString(R.string.name_save_dir);
-                File root = Environment.getExternalStorageDirectory();
-                File pictures = new File(root.getPath() + "/Pictures");
-                if(pictures.isDirectory()){
-                    root = new File(pictures.getPath() + "/" + save_dir);
-                }else if(!pictures.exists()) {
-                    pictures.mkdir();
-                    root = new File(pictures.getPath() + "/" + save_dir);
-                }else{
-                    root = new File(root.getPath() + "/" + save_dir);
-                }
-
-                if(!root.isDirectory()){
-                    if(root.exists()){
-                        int i = 0;
-                        File tmp_root;
-                        while(true){
-                            tmp_root = new File(root.getPath() + "_" + i);
-                            if(tmp_root.isDirectory()) {
-                                root = tmp_root;
-                                break;
-                            }
-                            if(!tmp_root.exists()){
-                                root = tmp_root;
-                                root.mkdir();
-                                break;
-                            }
-                            i ++;
-                        }
-                    }else {
-                        root.mkdir();
-                    }
-                }
-                SimpleDateFormat filename_format = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                String filename_base = filename_format.format(new Date());
-                String filename = filename_base + ext;
-                File file_to_save = new File(root, filename);
-                int i = 0;
-                while (file_to_save.exists()) {
-                    filename = filename_base + "_" + i + ext;
-                    file_to_save = new File(root, filename);
-                    i++;
-                }
-                String filepath = file_to_save.toString();
-                FileOutputStream output = new FileOutputStream(filepath);
-                if(ext == ".jpg") {
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 80, output);
-                }else{
-                    bmp.compress(Bitmap.CompressFormat.PNG, 100, output);
-                }
-                output.close();
-
-
-                ContentValues values = new ContentValues();
-                ContentResolver contentResolver = getContentResolver();
-                values.put(MediaStore.Images.Media.MIME_TYPE, mime_type);
-                values.put(MediaStore.Images.Media.TITLE, filename);
-                values.put("_data", filepath);
-                contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-
-                show_message(getText(R.string.saved_message) + filename);
-            }catch(IOException e) {
-                Log.e("Error", e.toString());
-                show_message(getString(R.string.error_message) + e.toString());
-            }
-
-        }
+        main_view.save_image();
     }
-
     private void load_image() {
         Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         startActivityForResult(intent, RESULT_PICK_IMAGE_FILE);
@@ -214,37 +150,24 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case RESULT_PICK_IMAGE_FILE:
                 if (resultCode == RESULT_OK) {
-                    BitmapFactory.Options options = new BitmapFactory.Options();
-                    options.inJustDecodeBounds = false;
-                    Bitmap bmp = null;
-                    Uri selectedImageURI = intent.getData();
+                    Uri uri = intent.getData();
 
-                    if(selectedImageURI == null) {
+                    if(uri == null) {
                         return;
-                    }
+                    }else{
+                        if(main_view.load_target_image(uri)){
 
-                    InputStream input = null;
-                    try {
-                        input = getContentResolver().openInputStream(selectedImageURI);
-                        bmp = BitmapFactory.decodeStream(input, null, options);
-
-                    } catch (FileNotFoundException e) {
-                        Log.e("Error", e.toString());
-                        show_message(getString(R.string.error_message) + e.toString());
-
-                    }
-
-                    if(bmp != null) {
-                        main_view.set_target_image(bmp);
-
-                        item_save.setEnabled(true);
-                        item_arrow_add.setEnabled(true);
-                        item_composed.setEnabled(true);
-                        item_masked.setEnabled(true);
-                        item_mask.setEnabled(true);
-                        item_composed.setChecked(true);
-                        main_view.set_view_mode(R.id.action_composed);
-                        set_arrow_del_enabled();
+							image_loaded = true;
+	                        set_save_enabled();
+	                        item_arrow_add.setEnabled(true);
+	                        item_original.setEnabled(true);
+	                        item_composed.setEnabled(true);
+	                        item_masked.setEnabled(true);
+	                        item_mask.setEnabled(true);
+	                        item_composed.setChecked(true);
+	                        main_view.set_view_mode(R.id.action_composed);
+	                        set_arrow_del_enabled();
+	                    }
                     }
                 }
                 break;
@@ -252,5 +175,23 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
+    
+    boolean image_loaded = false;
+    
+@Override
+protected void onSaveInstanceState(Bundle outState) {
+    super.onSaveInstanceState(outState);
+    
+    main_view.save_state(outState);
+}
+
+@Override
+protected void onRestoreInstanceState(Bundle savedInstanceState) {
+    super.onRestoreInstanceState(savedInstanceState);
+    
+    main_view.restore_state(savedInstanceState);
+    
+}
+
 
 }

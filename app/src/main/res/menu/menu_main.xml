@@ -6,6 +6,7 @@
     <item android:id="@+id/action_load" android:title="@string/action_load" app:showAsAction="never"/>
     <item android:id="@+id/action_save" android:title="@string/action_save" app:showAsAction="never" android:enabled="false"/>
     <group android:checkableBehavior="single">
+        <item android:id="@+id/action_original" android:title="@string/action_original" app:showAsAction="never" android:enabled="false"/>
         <item android:id="@+id/action_composed" android:title="@string/action_composed" app:showAsAction="never" android:checked="true" android:enabled="false"/>
         <item android:id="@+id/action_masked" android:title="@string/action_masked" app:showAsAction="never" android:enabled="false"/>
         <item android:id="@+id/action_mask" android:title="@string/action_mask" app:showAsAction="never" android:enabled="false"/>

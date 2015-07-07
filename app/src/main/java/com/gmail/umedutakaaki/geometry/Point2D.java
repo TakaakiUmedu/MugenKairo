@@ -1,6 +1,7 @@
 package com.gmail.umedutakaaki.geometry;
 
 public class Point2D {
+    public final static Point2D ZERO = new Point2D(0, 0);
     public final float x, y;
 
     public Point2D(float x, float y) {
@@ -39,5 +40,6 @@ public class Point2D {
     }
 
 }
+
 
 

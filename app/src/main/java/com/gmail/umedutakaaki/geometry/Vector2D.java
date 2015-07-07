@@ -2,6 +2,7 @@ package com.gmail.umedutakaaki.geometry;
 
 
 public class Vector2D {
+    public final static Vector2D ZERO = new Vector2D(0, 0);
     public final float x, y;
 
     public Vector2D(float x, float y) {

@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">Infinite Cloister</string>
+
+    <string name="action_help">Help</string>
+    <string name="action_load">Load</string>
+    <string name="action_save">Save</string>
+    <string name="action_original">Original</string>
+    <string name="action_composed">Composed</string>
+    <string name="action_masked">Masked</string>
+    <string name="action_mask">Mask</string>
+    <string name="action_arrow_add">Arrow+</string>
+    <string name="action_arrow_del">Arrow-</string>
+
+    <string name="name_save_dir">InfiniteCloister</string>
+
+    <string name="saved_message">Image Saved as "%1$s".</string>
+    <string name="load_error_message">Error: Cannot load from "%1$s".\n</string>
+    <string name="prepare_save_error_message">Error: Failed to Find and Create Directory to Save. Cannot save.</string>
+    <string name="save_error_message">Error: Cannot save as "%1$s".\n</string>
+
+    <string name="image_resized">Loaded Image Resized into %1$d x %2$d Pixels to Avoid Out of Memory</string>
+
+    <string name="initial_message">Please Load Image from the Menu</string>
+
+    <string name="title_activity_help">Infinite Cloister Help</string>
+
+    <string name="help_content">
+        <b>Usage</b>\n
+        \n
+        1. Load Image\n
+        2. Adjust Positions of Arrows so that Infinite Cloister appears\n
+        3. Save the Result\n
+    </string>
+</resources>

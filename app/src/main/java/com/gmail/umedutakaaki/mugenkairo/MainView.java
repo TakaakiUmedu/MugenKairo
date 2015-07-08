@@ -77,19 +77,27 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
 
         });
 
-        if(context instanceof MainActivity) {
+        if (context instanceof MainActivity) {
             main_activity = (MainActivity) context;
         }
-        maximum_image_pixels = (long)((float)Runtime.getRuntime().maxMemory() * MAXIMUM_IMAGE_MEMORY_RATIO / (4.0f * MAXIMUM_IMAGE_COUNT_TO_BE_LOADED));
-//        maximum_image_pixels = (long)(((ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE)).getMemoryClass() * 1024 * 1024 / (MAXIMUM_IMAGE_MEMORY_RATIO * 4));
 
 
-		composer = new Composer();
+        composer = new Composer();
+
 
     }
-    private static float MAXIMUM_IMAGE_MEMORY_RATIO = 0.8f;
+    @Override
+    public void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        if (restored_state != null) {
+            restore_state(restored_state);
+            restored_state = null;
+            main_activity.enable_menu_items();
+        }
+    }
+
+    private static float MAXIMUM_IMAGE_MEMORY_RATIO = 0.7f;
     private static int MAXIMUM_IMAGE_COUNT_TO_BE_LOADED = 3;
-    private long maximum_image_pixels;
 
 
     private ScaleGestureDetector scale_gesture_detector;
@@ -120,8 +128,8 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
 
     public static final int VIEW_MODE_ORIGINAL = R.id.action_original;
     public static final int VIEW_MODE_COMPOSED = R.id.action_composed;
-    public static final int VIEW_MODE_MASKED   = R.id.action_masked;
-    public static final int VIEW_MODE_MASK     = R.id.action_mask;
+    public static final int VIEW_MODE_MASKED = R.id.action_masked;
+    public static final int VIEW_MODE_MASK = R.id.action_mask;
 
     private void initialize_arrows() {
         Rect source_rect = composer.source_rect();
@@ -190,9 +198,11 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
 
 
     public boolean load_target_image(Uri image_uri) {
-       this.image_uri = image_uri;
+        this.image_uri = image_uri;
 
+        restored_state = null;
         Bitmap bmp = null;
+        composer.release_images();
         try {
             InputStream input = main_activity.getContentResolver().openInputStream(image_uri);
 
@@ -200,11 +210,10 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             options.inJustDecodeBounds = true;
             BitmapFactory.decodeStream(input, null, options);
 
-            int in_sample_size  = 1;
-            while(true) {
-                if(options.outHeight * options.outWidth / in_sample_size < maximum_image_pixels){
-                    break;
-                }
+            long maximum_image_pixels = (long) ((float) Runtime.getRuntime().maxMemory() * MAXIMUM_IMAGE_MEMORY_RATIO / (4.0f * MAXIMUM_IMAGE_COUNT_TO_BE_LOADED));
+
+            int in_sample_size = 1;
+            while (options.outHeight * options.outWidth / in_sample_size > maximum_image_pixels) {
                 in_sample_size *= 2;
             }
 
@@ -213,7 +222,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             options.inJustDecodeBounds = false;
             options.inSampleSize = in_sample_size;
             bmp = BitmapFactory.decodeStream(input, null, options);
-            if(in_sample_size > 1) {
+            if (in_sample_size > 1) {
                 main_activity.show_message(String.format(main_activity.getString(R.string.image_resized), options.outWidth, options.outHeight));
             }
 
@@ -223,25 +232,34 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         }
 
         if (bmp != null) {
-        	composer.set_source_image(bmp);
-            int w = getWidth(), h = getHeight();
-            canvas_rect = new Rect(0, 0, w, h);
+            composer.set_source_image(bmp);
+            initialize_view();
 
-            view_scale_range.min = Math.min((float) w / (float) composer.source_width(), (float) h / (float) composer.source_height());
-            view_scale_range.max = Math.max(view_scale_range.min, Math.min((float) w / MINIMUM_DOTS_IN_DISPLAY, (float) h / MINIMUM_DOTS_IN_DISPLAY));
-
-            view_offset = new Vector2D(0, 0);
-            set_view_scale(view_scale_range.min);
             initialize_arrows();
 
             control_visible = true;
             composer.update_geometry_data(arrows);
-            
-	        invalidate();
+
+            invalidate();
             return true;
-        }else{
-        	return false;
+        } else {
+            return false;
         }
+    }
+    private void initialize_view() {
+        int w = getWidth(), h = getHeight();
+        int source_w = composer.source_width();
+        int source_h = composer.source_height();
+        if (source_w <= 0 || source_h <= 0){
+            return ;
+        }
+        canvas_rect = new Rect(0, 0, w, h);
+
+        view_scale_range.min = Math.min((float) w / (float) source_w, (float) h / (float) source_h);
+        view_scale_range.max = Math.max(view_scale_range.min, Math.min((float) w / MINIMUM_DOTS_IN_DISPLAY, (float) h / MINIMUM_DOTS_IN_DISPLAY));
+        view_offset = new Vector2D(0, 0);
+        set_view_scale(view_scale_range.min);
+
     }
 
     private File find_and_create_save_dir() {
@@ -251,7 +269,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         if (pictures.isDirectory()) {
             root = new File(pictures.getPath() + "/" + save_dir);
         } else if (!pictures.exists()) {
-            if (pictures.mkdir() == false) {
+            if (!pictures.mkdir()) {
                 return null;
             }
             root = new File(pictures.getPath() + "/" + save_dir);
@@ -259,21 +277,23 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             root = new File(root.getPath() + "/" + save_dir);
         }
 
-        if (!root.isDirectory()) {
-            if (root.exists()) {
-                int i = 0;
-                File tmp_root;
-                while (true) {
-                    tmp_root = new File(root.getPath() + "_" + i);
-                    if (tmp_root.isDirectory()) {
-                        return tmp_root;
-                    }
-                    if (!tmp_root.exists()) {
-                        root = tmp_root;
-                        break;
-                    }
-                    i++;
+        if (root.isDirectory()) {
+            return root;
+        }
+        if (root.exists()) {
+            int i = 0;
+            File tmp_root;
+            while (true) {
+                tmp_root = new File(root.getPath() + "_" + i);
+                if (!tmp_root.exists()) {
+                    root = tmp_root;
+                    break;
                 }
+                if (tmp_root.isDirectory()) {
+                    return tmp_root;
+                }
+
+                i++;
             }
         }
         if (root.mkdir()) {
@@ -281,7 +301,6 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         } else {
             return null;
         }
-
     }
 
 
@@ -338,9 +357,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
     }
 
 
-
-
-   final float MINIMUM_DOTS_IN_DISPLAY = 32;
+    final float MINIMUM_DOTS_IN_DISPLAY = 32;
 
     private final Paint paint = new Paint();
 
@@ -350,6 +367,9 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
 
         if (arrows == null) {
             initialize_arrows();
+        }
+        if(view_scale <= 0) {
+            initialize_view();
         }
 
         paint.reset();
@@ -395,38 +415,40 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         if (control_visible) {
             paint.setAntiAlias(true);
             Point2D cur_center = composer.center();
-            if(cur_center != null) {
+            if (cur_center != null) {
                 paint.setStyle(Paint.Style.STROKE);
                 paint.setColor(0xFFFFFF00);
-                Point2D lt = cur_center.sub(new Vector2D(1, 1).mul(CIRCLE_SIZE));
-                Point2D rb = cur_center.add(new Vector2D(1, 1).mul(CIRCLE_SIZE));
+                Point2D lt = calc_offset_pos(cur_center).sub(new Vector2D(1, 1).mul(CIRCLE_SIZE));
+                Point2D rb = calc_offset_pos(cur_center).add(new Vector2D(1, 1).mul(CIRCLE_SIZE));
 //                    canvas.drawCircle(center.x + offset.x, center.y + offset.y, CIRCLE_SIZE, paint);
 
                 paint.setStrokeWidth(LINE_WIDTH_BORDER);
                 paint.setColor(0x80000000);
                 float line_offset = (LINE_WIDTH_BORDER - LINE_WIDTH) / 2.0f;
-                offset_draw_line(lt.x - line_offset, lt.y - line_offset, rb.x + line_offset, rb.y + line_offset, canvas, paint);
-                offset_draw_line(lt.x - line_offset, rb.y + line_offset, rb.x + line_offset, lt.y - line_offset, canvas, paint);
+                canvas.drawLine(lt.x - line_offset, lt.y - line_offset, rb.x + line_offset, rb.y + line_offset, paint);
+                canvas.drawLine(lt.x - line_offset, rb.y + line_offset, rb.x + line_offset, lt.y - line_offset,  paint);
                 paint.setStrokeWidth(LINE_WIDTH);
                 paint.setColor(0xFFFFFF00);
-                offset_draw_line(lt.x, lt.y, rb.x, rb.y, canvas, paint);
-                offset_draw_line(lt.x, rb.y, rb.x, lt.y, canvas, paint);
+                canvas.drawLine(lt.x, lt.y, rb.x, rb.y, paint);
+                canvas.drawLine(lt.x, rb.y, rb.x, lt.y, paint);
             }
 
-            paint.setStyle(Paint.Style.STROKE);
-            for (Composer.Arrow a : arrows) {
+            if(arrows != null) {
+                paint.setStyle(Paint.Style.STROKE);
+                for (Composer.Arrow a : arrows) {
 
-                paint.setStrokeWidth(LINE_WIDTH_BORDER);
-                paint.setColor(0x80000000);
-                offset_draw_arrow(a.s, a.e, canvas, paint);
+                    paint.setStrokeWidth(LINE_WIDTH_BORDER);
+                    paint.setColor(0x80000000);
+                    offset_draw_arrow(a.s, a.e, canvas, paint);
 
-                paint.setStrokeWidth(LINE_WIDTH);
-                if (a == selected) {
-                    paint.setColor(0x80FF0000);
-                } else {
-                    paint.setColor(0x8000FF00);
+                    paint.setStrokeWidth(LINE_WIDTH);
+                    if (a == selected) {
+                        paint.setColor(0x80FF0000);
+                    } else {
+                        paint.setColor(0x8000FF00);
+                    }
+                    offset_draw_arrow(a.s, a.e, canvas, paint);
                 }
-                offset_draw_arrow(a.s, a.e, canvas, paint);
             }
         }
 
@@ -493,23 +515,29 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         if (source_rect == null || arrows == null) {
             return;
         }
-        Point2D center = composer.cur_center;
-        if (center == null) {
-            center = new Point2D(source_rect.width() / 2, source_rect.height() / 2);
+        if(arrows.size() > 1) {
+            Vector2D vs = Vector2D.ZERO;
+            Vector2D ve = Vector2D.ZERO;
+            for (Composer.Arrow a : arrows) {
+                vs = vs.add(a.s.sub(Point2D.ZERO));
+                ve = ve.add(a.e.sub(Point2D.ZERO));
+            }
+            vs = vs.mul(1.0f / arrows.size());
+            ve = ve.mul(1.0f / arrows.size());
+            arrows.add(new Composer.Arrow(Point2D.ZERO.add(vs), Point2D.ZERO.add(ve)));
+        }else{
+            initialize_arrows();
         }
-        Composer.Arrow last_arrow = arrows.get(arrows.size() - 1);
-        float r = last_arrow.angle() + (float) (Math.PI * 2 / (arrows.size() + 1));
-        float len = (source_rect.width() < source_rect.height() ? source_rect.width() : source_rect.height()) / 2.0f;
-        arrows.add(make_default_arrow(center.x, center.y, len, r));
-
 
         composer.update_geometry_data(arrows);
+        invalidate();
     }
 
     public void del_arrow() {
         if (arrows.size() > 2) {
             arrows.remove(arrows.size() - 1);
             composer.update_geometry_data(arrows);
+            invalidate();
         }
     }
 
@@ -613,13 +641,14 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
     }
 
     private void scroll_view(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-        if(selected != null) {
+        if (selected != null) {
             return;
         }
         set_view_offset(view_offset_range_x.clamp(view_offset.x - distanceX), view_offset_range_y.clamp(view_offset.y - distanceY));
 
     }
-    private void set_view_offset(float x, float y){
+
+    private void set_view_offset(float x, float y) {
         view_offset = new Vector2D(view_offset_range_x.clamp(x), view_offset_range_y.clamp(y));
         this.invalidate();
     }
@@ -699,7 +728,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             this.invalidate();
         }
     }
-    
+
     private static final String STATE_NAME_URI = "URI";
     private static final String STATE_NAME_VIEW_SCALE = "SCALE";
     private static final String STATE_NAME_VIEW_OFFSET_X = "OFFSET_X";
@@ -709,60 +738,99 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
     private static final String STATE_NAME_ARROW_E_X = "ARROW_E_X";
     private static final String STATE_NAME_ARROW_E_Y = "ARROW_E_Y";
     private static final String STATE_NAME_VIEW_MODE = "MODE";
-    
-    
-    public void save_state(Bundle state){
-        if(image_uri == null){
+
+
+    public void save_state(Bundle state) {
+        if (image_uri == null) {
             return;
         }
-    	state.putString(STATE_NAME_URI, image_uri.toString());
-    	
-    	state.putInt(STATE_NAME_VIEW_MODE, view_mode);
-    	state.putFloat(STATE_NAME_VIEW_SCALE, view_scale);
-    	state.putFloat(STATE_NAME_VIEW_OFFSET_X, view_offset.x);
-    	state.putFloat(STATE_NAME_VIEW_OFFSET_Y, view_offset.y);
-    	
-    	if(arrows != null && arrows.size() > 0){
-    		float[] s_x = new float[arrows.size()];
-    		float[] s_y = new float[arrows.size()];
-    		float[] e_x = new float[arrows.size()];
-    		float[] e_y = new float[arrows.size()];
-	    	for(int i = 0; i < arrows.size(); i ++){
-	    		Composer.Arrow a = arrows.get(i);
-	    		s_x[i] = a.s.x;
-	    		s_y[i] = a.s.y;
-	    		e_x[i] = a.e.x;
-	    		e_y[i] = a.e.y;
-	    	}
-	    	state.putFloatArray(STATE_NAME_ARROW_S_X, s_x);
-	    	state.putFloatArray(STATE_NAME_ARROW_S_Y, s_y);
-	    	state.putFloatArray(STATE_NAME_ARROW_E_X, e_x);
-	    	state.putFloatArray(STATE_NAME_ARROW_E_Y, e_y);
-    	}
+        state.putString(STATE_NAME_URI, image_uri.toString());
+
+        state.putInt(STATE_NAME_VIEW_MODE, view_mode);
+        state.putFloat(STATE_NAME_VIEW_SCALE, view_scale);
+        state.putFloat(STATE_NAME_VIEW_OFFSET_X, view_offset.x);
+        state.putFloat(STATE_NAME_VIEW_OFFSET_Y, view_offset.y);
+
+        if (arrows != null && arrows.size() > 0) {
+            float[] s_x = new float[arrows.size()];
+            float[] s_y = new float[arrows.size()];
+            float[] e_x = new float[arrows.size()];
+            float[] e_y = new float[arrows.size()];
+            for (int i = 0; i < arrows.size(); i++) {
+                Composer.Arrow a = arrows.get(i);
+                s_x[i] = a.s.x;
+                s_y[i] = a.s.y;
+                e_x[i] = a.e.x;
+                e_y[i] = a.e.y;
+            }
+            state.putFloatArray(STATE_NAME_ARROW_S_X, s_x);
+            state.putFloatArray(STATE_NAME_ARROW_S_Y, s_y);
+            state.putFloatArray(STATE_NAME_ARROW_E_X, e_x);
+            state.putFloatArray(STATE_NAME_ARROW_E_Y, e_y);
+        }
     }
 
-    public void restore_state(Bundle state){
-    	String uri_str = state.getString(STATE_NAME_URI);
-    	if(uri_str != null){
-	    	if(load_target_image(Uri.fromFile(new File(uri_str)))){
-		    	
-		    	view_mode = state.getInt(STATE_NAME_VIEW_MODE, VIEW_MODE_COMPOSED);
-		    	set_view_scale(state.getFloat(STATE_NAME_VIEW_SCALE, view_scale_range.min));
-		    	set_view_offset(state.getFloat(STATE_NAME_VIEW_OFFSET_X, 0), state.getFloat(STATE_NAME_VIEW_OFFSET_Y, 0));
-		
-		    	float[] s_x = state.getFloatArray(STATE_NAME_ARROW_S_X);
-		    	float[] s_y = state.getFloatArray(STATE_NAME_ARROW_S_Y);
-		    	float[] e_x = state.getFloatArray(STATE_NAME_ARROW_E_X);
-		    	float[] e_y = state.getFloatArray(STATE_NAME_ARROW_E_Y);
-		    	if(s_x != null && s_y != null && e_x != null && e_y != null && s_x.length == s_y.length && s_x.length == e_x.length && s_x.length == e_y.length){
-		            arrows = new ArrayList<>();
-		            for(int i = 0; i < s_x.length; i ++){
-		                arrows.add(new Composer.Arrow(new Point2D(s_x[i], s_y[i]), new Point2D(e_x[i], e_y[i])));
-		            }
-		    	}
-		    }
-		}
+
+
+    static class RestoredState {
+        Uri uri = null;
+        int view_mode;
+        float view_scale;
+        float view_offset_x;
+        float view_offset_y;
+        ArrayList<Composer.Arrow> arrows;
     }
-    
-    
+    RestoredState restored_state = null;
+
+    public void restore_state(Bundle state) {
+        String uri_str = state.getString(STATE_NAME_URI);
+        if (uri_str == null) {
+            return;
+        }
+        Uri uri = Uri.parse(uri_str);
+        if (uri == null) {
+            return;
+        }
+
+        restored_state = new RestoredState();
+
+        restored_state.uri = uri;
+        restored_state.view_mode = state.getInt(STATE_NAME_VIEW_MODE, VIEW_MODE_COMPOSED);
+        restored_state.view_scale = state.getFloat(STATE_NAME_VIEW_SCALE, view_scale_range.min);
+        restored_state.view_offset_x = state.getFloat(STATE_NAME_VIEW_OFFSET_X, 0);
+        restored_state.view_offset_y = state.getFloat(STATE_NAME_VIEW_OFFSET_Y, 0);
+
+        float[] s_x = state.getFloatArray(STATE_NAME_ARROW_S_X);
+        float[] s_y = state.getFloatArray(STATE_NAME_ARROW_S_Y);
+        float[] e_x = state.getFloatArray(STATE_NAME_ARROW_E_X);
+        float[] e_y = state.getFloatArray(STATE_NAME_ARROW_E_Y);
+        if(s_x != null && s_y != null && e_x != null && e_y != null && s_x.length == s_y.length && s_x.length == e_x.length && s_x.length == e_y.length){
+            restored_state.arrows = new ArrayList<>();
+            for(int i = 0; i < s_x.length; i ++){
+                restored_state.arrows.add(new Composer.Arrow(new Point2D(s_x[i], s_y[i]), new Point2D(e_x[i], e_y[i])));
+            }
+        }
+
+    }
+    private boolean restore_state(RestoredState restored_state){
+
+        if (!load_target_image(restored_state.uri)) {
+            return false;
+        }
+        view_mode = restored_state.view_mode;
+        set_view_scale(restored_state.view_scale);
+        set_view_offset(restored_state.view_offset_x, restored_state.view_offset_y);
+
+    arrows = restored_state.arrows;
+        composer.update_geometry_data(arrows);
+        invalidate();
+        return true;
+    }
+    public void destroy() {
+        composer.release_images();
+        composer = null;
+        Runtime.getRuntime().gc();
+    }
+
+
 }

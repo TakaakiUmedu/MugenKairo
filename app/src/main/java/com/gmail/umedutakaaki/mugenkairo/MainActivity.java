@@ -44,18 +44,18 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void set_save_enabled() {
-        if(main_view.get_view_mode() != MainView.VIEW_MODE_ORIGINAL && image_loaded) {
-			item_save.setEnabled(true);
-        }else{
-			item_save.setEnabled(false);
+        if (main_view.get_view_mode() != MainView.VIEW_MODE_ORIGINAL && image_loaded) {
+            item_save.setEnabled(true);
+        } else {
+            item_save.setEnabled(false);
         }
 
     }
 
     private void set_arrow_del_enabled() {
-        if(main_view.arrow_count() > 2) {
+        if (main_view.arrow_count() > 2) {
             item_arrow_del.setEnabled(true);
-        }else{
+        } else {
             item_arrow_del.setEnabled(false);
         }
 
@@ -78,14 +78,24 @@ public class MainActivity extends AppCompatActivity {
         item_save = menu.findItem(R.id.action_save);
         item_arrow_add = menu.findItem(R.id.action_arrow_add);
         item_arrow_del = menu.findItem(R.id.action_arrow_del);
-        item_original = menu.findItem(R.id.action_composed);
+        item_original = menu.findItem(R.id.action_original);
         item_composed = menu.findItem(R.id.action_composed);
         item_masked = menu.findItem(R.id.action_masked);
         item_mask = menu.findItem(R.id.action_mask);
+        menu_initialized = true;
+        if(waiting_for_menu_initialization) {
+        enable_menu_items();
+        }
         return true;
     }
+    boolean menu_initialized = false;
+    boolean waiting_for_menu_initialization = false;
 
-    public void show_message(String message){
+    public void show_message(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+    }
+
+    public void show_message_short(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
@@ -98,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        switch(id) {
+        switch (id) {
             case R.id.action_save:
                 save_image();
                 return true;
@@ -109,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
             case R.id.action_composed:
             case R.id.action_masked:
             case R.id.action_mask:
-                if(!item.isChecked()) {
+                if (!item.isChecked()) {
                     main_view.set_view_mode(id);
                     item.setChecked(true);
                     set_save_enabled();
@@ -120,7 +130,8 @@ public class MainActivity extends AppCompatActivity {
                 set_arrow_del_enabled();
                 return true;
             case R.id.action_arrow_del:
-                main_view.del_arrow();;
+                main_view.del_arrow();
+                ;
                 set_arrow_del_enabled();
                 return true;
             case R.id.action_help:
@@ -136,6 +147,7 @@ public class MainActivity extends AppCompatActivity {
     private void save_image() {
         main_view.save_image();
     }
+
     private void load_image() {
         Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         startActivityForResult(intent, RESULT_PICK_IMAGE_FILE);
@@ -143,6 +155,7 @@ public class MainActivity extends AppCompatActivity {
 
     final int RESULT_PICK_IMAGE_FILE = 123;
     int x = 0;
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
@@ -152,22 +165,12 @@ public class MainActivity extends AppCompatActivity {
                 if (resultCode == RESULT_OK) {
                     Uri uri = intent.getData();
 
-                    if(uri == null) {
+                    if (uri == null) {
                         return;
-                    }else{
-                        if(main_view.load_target_image(uri)){
-
-							image_loaded = true;
-	                        set_save_enabled();
-	                        item_arrow_add.setEnabled(true);
-	                        item_original.setEnabled(true);
-	                        item_composed.setEnabled(true);
-	                        item_masked.setEnabled(true);
-	                        item_mask.setEnabled(true);
-	                        item_composed.setChecked(true);
-	                        main_view.set_view_mode(R.id.action_composed);
-	                        set_arrow_del_enabled();
-	                    }
+                    } else {
+                        if (main_view.load_target_image(uri)) {
+                            enable_menu_items();
+                        }
                     }
                 }
                 break;
@@ -175,23 +178,46 @@ public class MainActivity extends AppCompatActivity {
                 break;
         }
     }
-    
-    boolean image_loaded = false;
-    
-@Override
-protected void onSaveInstanceState(Bundle outState) {
-    super.onSaveInstanceState(outState);
-    
-    main_view.save_state(outState);
-}
+    public void enable_menu_items(){
+        if(!menu_initialized){
+            waiting_for_menu_initialization = true;
+            return;
+        }
+        image_loaded = true;
+        set_save_enabled();
+        item_arrow_add.setEnabled(true);
+        item_original.setEnabled(true);
+        item_composed.setEnabled(true);
+        item_masked.setEnabled(true);
+        item_mask.setEnabled(true);
+        item_composed.setChecked(true);
+        main_view.set_view_mode(R.id.action_composed);
+        set_arrow_del_enabled();
 
-@Override
-protected void onRestoreInstanceState(Bundle savedInstanceState) {
-    super.onRestoreInstanceState(savedInstanceState);
-    
-    main_view.restore_state(savedInstanceState);
-    
-}
+    }
+
+    @Override
+    public void onDestroy() {
+        main_view.destroy();
+        super.onDestroy();
+    }
+
+    boolean image_loaded = false;
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        main_view.save_state(outState);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        main_view.restore_state(savedInstanceState);
+
+    }
 
 
 }

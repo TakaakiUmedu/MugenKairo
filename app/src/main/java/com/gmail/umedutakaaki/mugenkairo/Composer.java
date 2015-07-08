@@ -189,11 +189,19 @@ public class Composer {
     public Point2D center(){ return cur_center; }
 
     public int source_width() {
-        return source_rect.width();
+        if(source_rect != null) {
+            return source_rect.width();
+        }else{
+            return 0;
+        }
     }
 
     public int source_height() {
-        return source_rect.height();
+        if(source_rect != null) {
+            return source_rect.height();
+        }else {
+            return 0;
+        }
     }
 
 
@@ -461,12 +469,35 @@ public class Composer {
     }
     Rect compose_rect;
 
+    public void release_images(){
+        if(working_buffers != null){
+            working_buffers[0].bmp.recycle();
+            working_buffers[1].bmp.recycle();
+            working_buffers[0].canvas.setBitmap(null);
+            working_buffers[1].canvas.setBitmap(null);
+            working_buffers = null;
+        }
+        if(source_bmp != null){
+            source_bmp.recycle();
+            source_bmp = null;
+            source_rect = null;
+        }
+        cur_composed = null;
+        Runtime.getRuntime().gc();
+    }
+
+
     public Bitmap compose_image(float scale, int view_mode, boolean for_save, Paint paint) {
         if (cur_center != null && source_bmp != null && working_buffers != null) {
+            if(view_mode == VIEW_MODE_ORIGINAL){
+                compose_rect = source_rect;
+                return source_bmp;
+            }
             compose_rect = calc_working_rect(scale);
             working_buffers[0].canvas.clipRect(compose_rect, Region.Op.REPLACE);
             working_buffers[1].canvas.clipRect(compose_rect, Region.Op.REPLACE);
             float working_scale = (float) compose_rect.width() / (float) source_rect.width();
+            Point2D center = cur_center.scale(working_scale);
 
             paint.reset();
             DrawBuffer mask = working_buffers[0];
@@ -476,8 +507,14 @@ public class Composer {
             } else {
                 mask.canvas.drawColor(0xFFFFFFFF);
             }
-            float border_grad_width = cur_grad_width * working_scale;
-            Rect cut_rect = new Rect((int) border_grad_width, (int) border_grad_width, (int) (compose_rect.right - border_grad_width), (int) (compose_rect.bottom - border_grad_width));
+            int border_grad_width =(int)(default_grad_width_ratio * Math.min(source_rect.width(), source_rect.height()) * working_scale);
+            Rect dst_rect = calc_dst_rect(cur_scale, center);
+            int border_l = Math.min(Math.max(dst_rect.left, 0), border_grad_width);
+            int border_t = Math.min(Math.max(dst_rect.top, 0), border_grad_width);
+            int border_r = Math.min(Math.max(compose_rect.right - dst_rect.right, 0), border_grad_width);
+            int border_b = Math.min(Math.max(compose_rect.bottom - dst_rect.bottom, 0), border_grad_width);
+
+            Rect cut_rect = new Rect(border_l, border_t, compose_rect.right - border_r, compose_rect.bottom - border_b);
             draw_cut_border_mask(compose_rect, cut_rect, working.canvas, paint);
             paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.MULTIPLY));
             mask.canvas.drawBitmap(working.bmp, 0, 0, paint);
@@ -503,13 +540,11 @@ public class Composer {
                     float tmp_scale = cur_scale;
                     DrawBuffer src = null;
                     DrawBuffer dst = null;
-                    Point2D cur_scaled_center = cur_center.scale(scale);
                     for (int i = 0; i < REPEAT_COUNT; i++) {
                         src = working_buffers[(i + 1) % 2];
                         dst = working_buffers[i % 2];
                         dst.canvas.drawColor(0x00000000, PorterDuff.Mode.CLEAR);
-                        matrix.setScale(tmp_scale, tmp_scale, cur_scaled_center.x, cur_scaled_center.y);
-                        dst.canvas.drawBitmap(src.bmp, matrix, paint);
+                        dst.canvas.drawBitmap(src.bmp, compose_rect, calc_dst_rect(tmp_scale, center), paint);
                         dst.canvas.drawBitmap(src.bmp, 0, 0, paint);
                         tmp_scale *= tmp_scale;
                         if (tmp_scale == 0.0f) {
@@ -528,6 +563,13 @@ public class Composer {
 
         return null;
     }
+    Rect calc_dst_rect(float scale, Point2D center){
+        Point2D lt = Point2D.ZERO.scale(scale, center);
+        float w = compose_rect.right * scale;
+        float h = compose_rect.bottom * scale;
+        return new Rect((int)(lt.x), (int)(lt.y), (int)(lt.x + w), (int)(lt.y + h));
+    }
+
 
 
     private Point2D[] rect_to_points(Rect rect) {

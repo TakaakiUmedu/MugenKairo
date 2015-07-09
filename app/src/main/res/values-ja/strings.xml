@@ -19,6 +19,7 @@
     <string name="load_error_message">エラー: "%1$s"を読み込めません。\n</string>
     <string name="prepare_save_error_message">保存先のディレクトリの取得、作成に失敗しました。保存できません。</string>
     <string name="save_error_message">エラー: "%1$s"へ保存できません。\n</string>
+    <string name="out_of_memory_error_message">エラー: メモリ不足です.</string>
 
     <string name="image_resized">メモリ不足の回避のため、イメージを%1$d×%2$dピクセルに縮小して読み込みました</string>
 

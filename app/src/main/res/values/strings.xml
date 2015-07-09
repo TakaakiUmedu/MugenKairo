@@ -17,6 +17,7 @@
     <string name="load_error_message">Error: Cannot load from "%1$s".\n</string>
     <string name="prepare_save_error_message">Error: Failed to Find and Create Directory to Save. Cannot save.</string>
     <string name="save_error_message">Error: Cannot save as "%1$s".\n</string>
+    <string name="out_of_memory_error_message">Error: Out of Memory.</string>
 
     <string name="image_resized">Loaded Image Resized into %1$d x %2$d Pixels to Avoid Out of Memory</string>
 

@@ -96,7 +96,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         }
     }
 
-    private static float MAXIMUM_IMAGE_MEMORY_RATIO = 0.7f;
+    private static float MAXIMUM_IMAGE_MEMORY_RATIO = 0.8f;
     private static int MAXIMUM_IMAGE_COUNT_TO_BE_LOADED = 3;
 
 
@@ -221,18 +221,37 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
 
             options.inJustDecodeBounds = false;
             options.inSampleSize = in_sample_size;
-            bmp = BitmapFactory.decodeStream(input, null, options);
+            int image_size = Math.min(options.outHeight, options.outWidth);
+            while(true) {
+                if (image_size / options.inSampleSize < IMAGE_SIZE_MIN) {
+                    main_activity.show_message(String.format(main_activity.getString(R.string.out_of_memory_error_message), options.outWidth, options.outHeight));
+                    return false;
+                }
+                try {
+                    bmp = BitmapFactory.decodeStream(input, null, options);
+                } catch (OutOfMemoryError e) {
+                }
+                if (bmp == null || composer.set_source_image(bmp) == false) {
+                    options.inSampleSize *= 2;
+                    if(bmp != null) {
+                        bmp.recycle();
+                        bmp = null;
+                    }
+                    Runtime.getRuntime().gc();
+                    continue;
+                }
+                break;
+            }
             if (in_sample_size > 1) {
                 main_activity.show_message(String.format(main_activity.getString(R.string.image_resized), options.outWidth, options.outHeight));
             }
-
         } catch (IOException e) {
             Log.e("Error", e.toString());
             main_activity.show_message(String.format(main_activity.getString(R.string.load_error_message), image_uri.toString()) + e.toString());
+            composer.release_images();
         }
 
         if (bmp != null) {
-            composer.set_source_image(bmp);
             initialize_view();
 
             initialize_arrows();
@@ -246,6 +265,8 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             return false;
         }
     }
+    static final private int IMAGE_SIZE_MIN = 64;
+
     private void initialize_view() {
         int w = getWidth(), h = getHeight();
         int source_w = composer.source_width();
@@ -544,17 +565,17 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
 
     private float is_touching_circle(Point2D p1, Point2D p2) {
         Vector2D d = p1.sub(p2);
-        float len2 = d.length2();
+        float len2 = d.length2() * (view_scale  * view_scale);
         if (len2 < CIRCLE_SIZE * CIRCLE_SIZE * TOUCH_MARGIN * TOUCH_MARGIN) {
             return len2;
         }
         return -1;
     }
 
-    private static final float TOUCH_MARGIN = 1.5f;
+    private static final float TOUCH_MARGIN = 2f;
 
     private boolean get_touching_arrow(Point2D pos) {
-        float min = CIRCLE_SIZE * CIRCLE_SIZE * 2;
+        float min = CIRCLE_SIZE * CIRCLE_SIZE * TOUCH_MARGIN * TOUCH_MARGIN * 2;
         boolean found = false;
         for (Composer.Arrow a : arrows) {
             float len2;

@@ -207,14 +207,29 @@ public class Composer {
 
     Uri image_uri;
 
-    public void set_source_image(Bitmap bmp) {
+    public boolean set_source_image(Bitmap bmp) {
         int source_w = bmp.getWidth(), source_h = bmp.getHeight();
         source_bmp = bmp;
         source_rect = new Rect(0, 0, source_w, source_h);
 //            source_rotated = ((w > h && source_w < source_h || w < h && source_w > source_h));
 
-        working_buffers = new DrawBuffer[]{new DrawBuffer(source_w, source_h), new DrawBuffer(source_w, source_h)};
+        Bitmap bmp1 = null, bmp2 = null;
+        try {
+            bmp1 = Bitmap.createBitmap( source_w, source_h, Bitmap.Config.ARGB_8888);
+            bmp2 = Bitmap.createBitmap( source_w, source_h, Bitmap.Config.ARGB_8888);
+        }catch(OutOfMemoryError e) {
+            if (bmp1 != null) {
+                bmp1.recycle();
+            }
+            if (bmp2 != null) {
+                bmp2.recycle();
+            }
+            return false;
+        }
+
+        working_buffers = new DrawBuffer[]{new DrawBuffer(source_w, source_h, bmp1), new DrawBuffer(source_w, source_h, bmp2)};
         cur_center = null;
+        return true;
     }
 
 
@@ -237,10 +252,10 @@ public class Composer {
         Bitmap bmp;
         Canvas canvas;
 
-        public DrawBuffer(int w, int h) {
+        public DrawBuffer(int w, int h, Bitmap bmp) {
             this.w = w;
             this.h = h;
-            bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            this.bmp = bmp;
             canvas = new Canvas(bmp);
         }
     }

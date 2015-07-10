@@ -40,15 +40,25 @@ public class MainActivity extends AppCompatActivity {
 
         main_view = ((MainView) findViewById(R.id.main_view));
 
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        if(action.equals(Intent.ACTION_SEND) || action.equals(Intent.ACTION_EDIT) || action.equals(Intent.ACTION_VIEW)) {
+            Bundle bundle = intent.getExtras();
+            Uri uri = intent.getData();
+
+            if (uri != null) {
+                main_view.load_source_image(uri);
+            }
+        }
     }
 
 
     private void set_save_enabled() {
-        if (main_view.get_view_mode() != MainView.VIEW_MODE_ORIGINAL && image_loaded) {
+        if (main_view.get_view_mode() != MainView.VIEW_MODE_ORIGINAL && main_view.image_loaded()) {
             item_save.setEnabled(true);
             item_share.setEnabled(true);
         } else {
-            item_save.setEnabled(true);
+            item_save.setEnabled(false);
             item_share.setEnabled(false);
         }
 
@@ -60,7 +70,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             item_arrow_del.setEnabled(false);
         }
-
     }
 
     MainView main_view;
@@ -102,6 +111,7 @@ public class MainActivity extends AppCompatActivity {
     public void show_message_short(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -155,13 +165,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void share_image(){
-        MainView saved_data = main_view.save_image();
+        MainView.SavedData saved_data = main_view.save_image();
         if(saved_data != null) {
             Intent intent = new Intent();
             intent.setAction(Intent.ACTION_SEND);
-            intent.setType("image/jpg");
-            intent.putExtra(Intent.EXTRA_ORIGINATING_URI, saved_data.uri);
-            startActivity(intent);
+            intent.putExtra(Intent.EXTRA_TEXT, "#" + getString(R.string.app_name).replaceAll(" ", "") + " ");
+            intent.putExtra(Intent.EXTRA_STREAM, saved_data.uri);
+            intent.setType(saved_data.mime_type);
+//            startActivity(intent);
+            startActivity(Intent.createChooser(intent, getString(R.string.choose_message)));
         }
     }
 
@@ -202,7 +214,6 @@ public class MainActivity extends AppCompatActivity {
             waiting_for_menu_initialization = true;
             return;
         }
-        image_loaded = true;
         set_save_enabled();
         item_arrow_add.setEnabled(true);
         item_original.setEnabled(true);
@@ -220,8 +231,6 @@ public class MainActivity extends AppCompatActivity {
         main_view.destroy();
         super.onDestroy();
     }
-
-    boolean image_loaded = false;
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {

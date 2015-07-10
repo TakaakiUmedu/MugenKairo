@@ -5,7 +5,7 @@
     <string name="action_help">ヘルプ</string>
     <string name="action_load">ロード</string>
     <string name="action_save">セーブ</string>
-    <string name="action_share">結果をシェア</string>
+    <string name="action_share">セーブしてシェア</string>
     <string name="action_original">元画像</string>
     <string name="action_composed">合成結果</string>
     <string name="action_masked">マスク結果</string>
@@ -16,9 +16,10 @@
 
     <string name="name_save_dir">MugenKairo</string>
 
-    <string name="initial_message">メニューから画像をロードして下さい</string>
-
+    <string name="initial_message">ここをタップするかメニューから画像をロードして下さい</string>
     <string name="saved_message">"%1$s"に保存しました。</string>
+    <string name="choose_message">シェア先</string>
+
     <string name="load_error_message">エラー: "%1$s"を読み込めません。\n</string>
     <string name="prepare_save_error_message">保存先のディレクトリの取得、作成に失敗しました。保存できません。</string>
     <string name="save_error_message">エラー: "%1$s"へ保存できません。\n</string>

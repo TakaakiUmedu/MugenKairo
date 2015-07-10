@@ -4,7 +4,7 @@
     <string name="action_help">Help</string>
     <string name="action_load">Load</string>
     <string name="action_save">Save</string>
-    <string name="action_share">Share Image</string>
+    <string name="action_share">Save &amp; Share</string>
     <string name="action_original">Original</string>
     <string name="action_composed">Composed</string>
     <string name="action_masked">Masked</string>
@@ -16,6 +16,8 @@
     <string name="name_save_dir">InfiniteCloister</string>
 
     <string name="saved_message">Image Saved as "%1$s".</string>
+    <string name="choose_message">Share To</string>
+
     <string name="load_error_message">Error: Cannot load from "%1$s".\n</string>
     <string name="prepare_save_error_message">Error: Failed to Find and Create Directory to Save. Cannot save.</string>
     <string name="save_error_message">Error: Cannot save as "%1$s".\n</string>
@@ -23,7 +25,7 @@
 
     <string name="image_resized">Loaded Image Resized into %1$d x %2$d Pixels to Avoid Out of Memory</string>
 
-    <string name="initial_message">Please Load Image from the Menu</string>
+    <string name="initial_message">Tap Here or Choose Menu Item to Load Image</string>
 
     <string name="title_activity_help">Infinite Cloister Help</string>
 

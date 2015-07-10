@@ -92,57 +92,49 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         if(w == 0 || h == 0) {
             return;
         }
-        if (restored_state != null) {
-            restore_state();
+        if (restored_image != null && restored_state != null) {
+            load_source_image(restored_image, restored_state);
         }else{
-            main_activity.load_image();
+//            main_activity.load_image();
         }
     }
+
     public void load_source_image(Uri image_uri) {
+        load_source_image(image_uri, null);
+    }
+    private void load_source_image(Uri image_uri, RestoredState restored_state) {
         int w = getWidth(), h = getHeight();
         if (w == 0 || h == 0) {
-            this.restored_state = new RestoredState();
-            this.restored_state.uri = image_uri;
+            this.restored_image = image_uri;
+            this.restored_state = restored_state;
             return;
         }
+        this.restored_image = null;
         this.restored_state = null;
-        load_source_image_in_composer(image_uri);
+
+        load_source_image_in_composer(image_uri, w, h);
         if (!image_loaded()) {
             return;
         }
-        initialize_view(w, h);
-        initialize_arrows();
-        view_mode = VIEW_MODE_ORIGINAL;
-        composer.update_geometry_data(arrows);
-    }
+        view = new ViewState(w, h, composer.source_width(), composer.source_height());
 
-    private void restore_state() {
-        int w = getWidth(), h = getHeight();
-        if (w == 0 || h == 0) {
-            return;
-        }
-        RestoredState restored_state = this.restored_state;
-        this.restored_state = null;
-
-        load_source_image_in_composer(restored_state.uri);
-        if (image_loaded()) {
-            initialize_view(w, h);
-            if (restored_state.view_scale > 0) {
-                set_view_scale(restored_state.view_scale);
-                set_view_offset(restored_state.view_offset_x, restored_state.view_offset_y);
-                if(restored_state.arrows != null) {
-                    arrows = restored_state.arrows;
-                }else {
-                    initialize_arrows();
-                }
-                view_mode = restored_state.view_mode;
+        if (restored_state != null) {
+            set_view_scale(restored_state.view_scale);
+            view.set_offset(restored_state.view_offset_x, restored_state.view_offset_y);
+            if (restored_state.arrows != null) {
+                arrows = restored_state.arrows;
             } else {
                 initialize_arrows();
-                view_mode = VIEW_MODE_ORIGINAL;
-
             }
-            composer.update_geometry_data(arrows);
+            view_mode = restored_state.view_mode;
+        } else {
+            initialize_arrows();
+            view_mode = VIEW_MODE_ORIGINAL;
         }
+        composer.update_geometry_data(arrows);
+        control_visible = true;
+        main_activity.enable_menu_items();
+        invalidate();
     }
 
     private static float MAXIMUM_IMAGE_MEMORY_RATIO = 5f;
@@ -194,6 +186,73 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             }
         }
     }
+    private static class ViewState {
+        Rect canvas_rect;
+        Rect source_rect;
+        float scale;
+        Range scale_range = new Range(1.0f);
+        Vector2D offset;
+        Range offset_range_x = new Range(0.0f);
+        Range offset_range_y = new Range(0.0f);
+
+        ViewState(int w, int h, int source_w, int source_h) {
+            canvas_rect = new Rect(0, 0, w, h);
+            source_rect = new Rect(0, 0, source_w, source_h);
+            offset = new Vector2D(0.0f, 0.0f);
+
+
+            canvas_rect = new Rect(0, 0, w, h);
+
+            scale_range.min = Math.min((float) w / (float) source_w, (float) h / (float) source_h);
+            scale_range.max = Math.max(scale_range.min, Math.min((float) w / MINIMUM_DOTS_IN_DISPLAY, (float) h / MINIMUM_DOTS_IN_DISPLAY));
+            offset = new Vector2D(0, 0);
+            set_scale(scale_range.min);
+        }
+
+        public void set_scale(float scale) {
+            scale = scale_range.clamp(scale);
+            if (scale != this.scale) {
+                this.scale = scale;
+                float margin_x = source_rect.width() * scale - canvas_rect.width();
+                float margin_y = source_rect.height() * scale - canvas_rect.height();
+                if (margin_x < 0) {
+                    offset_range_x.min = offset_range_x.max = -margin_x / 2.0f;
+                } else {
+                    offset_range_x.min = -margin_x;
+                    offset_range_x.max = 0;
+                }
+                if (margin_y < 0) {
+                    offset_range_y.min = offset_range_y.max = -margin_y / 2.0f;
+                } else {
+                    offset_range_y.min = -margin_y;
+                    offset_range_y.max = 0;
+                }
+                offset = new Vector2D(offset_range_x.clamp(offset.x), offset_range_y.clamp(offset.y));
+            }
+        }
+
+        public void set_offset(float x, float y) {
+            offset = new Vector2D(offset_range_x.clamp(x), offset_range_y.clamp(y));
+        }
+
+        public Point2D calc_offset_pos(Point2D pos) {
+            return pos.scale(scale).add(offset);
+        }
+
+        public void scroll(float dx, float dy) {
+           set_offset(offset.x + dx, offset.y + dy);
+        }
+        public void scale(float ratio, float cx, float cy) {
+            float prev_view_scale = scale;
+            set_scale(scale * ratio);
+            Point2D center = new Point2D(cx, cy);
+            float view_offset_x = (offset.x - center.x) * (scale / prev_view_scale) + center.x;
+            float view_offset_y = (offset.y - center.y) * (scale / prev_view_scale) + center.y;
+            set_offset(view_offset_x, view_offset_y);
+        }
+    }
+    ViewState view = null;
+
 
     private Composer.Arrow make_default_arrow(float cx, float cy, float len, double r) {
         float sin = (float) Math.sin(r);
@@ -217,8 +276,8 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
 
 
     private void offset_draw_arrow(Point2D s, Point2D e, Canvas canvas, Paint paint) {
-        s = calc_offset_pos(s);
-        e = calc_offset_pos(e);
+        s = view.calc_offset_pos(s);
+        e = view.calc_offset_pos(e);
         Vector2D v = e.sub(s);
         float len = v.length();
         v = v.div(2.0f);
@@ -241,25 +300,10 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
 
 
     boolean source_rotated = false;
-    Rect canvas_rect = null;
 
     Uri image_uri;
 
-    private void load_source_image_in_composer(Uri image_uri) {
-        int w = getWidth(), h = getHeight();
-        if(w == 0 || h == 0) {
-            if (restored_state != null) {
-                this.restored_state = restored_state;
-            } else {
-                this.restored_state = new RestoredState();
-            }
-            this.restored_state.uri = image_uri;
-            return;
-        }else {
-            restored_state = null;
-        }
-        this.image_uri = image_uri;
-
+    private void load_source_image_in_composer(Uri image_uri, int w, int h) {
         Bitmap bmp = null;
         composer.release_images();
         try {
@@ -308,9 +352,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             if (in_sample_size > 1) {
                 main_activity.show_message(String.format(main_activity.getString(R.string.image_resized), options.outWidth, options.outHeight));
             }
-            control_visible = true;
-            main_activity.enable_menu_items();
-            invalidate();
+            this.image_uri = image_uri;
         } catch (IOException e) {
             Log.e("Error", e.toString());
             main_activity.show_message(String.format(main_activity.getString(R.string.load_error_message), image_uri.toString()) + e.toString());
@@ -319,20 +361,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
     }
     static final private float IMAGE_SIZE_MIN_RATIO = 4.1f;
 
-    private void initialize_view(int w, int h) {
-        int source_w = composer.source_width();
-        int source_h = composer.source_height();
-        if (source_w <= 0 || source_h <= 0){
-            return ;
-        }
-        canvas_rect = new Rect(0, 0, w, h);
 
-        view_scale_range.min = Math.min((float) w / (float) source_w, (float) h / (float) source_h);
-        view_scale_range.max = Math.max(view_scale_range.min, Math.min((float) w / MINIMUM_DOTS_IN_DISPLAY, (float) h / MINIMUM_DOTS_IN_DISPLAY));
-        view_offset = new Vector2D(0, 0);
-        set_view_scale(view_scale_range.min);
-
-    }
 
     private File find_and_create_save_dir() {
         String save_dir = main_activity.getString(R.string.name_save_dir);
@@ -374,10 +403,14 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             return null;
         }
     }
-public static class SavedData
-{
-    public File file;
+public static class SavedData {
+    Uri uri;
     public String mime_type;
+
+    public SavedData(Uri uri, String mime_type) {
+        this.uri = uri;
+        this.mime_type = mime_type;
+    }
 }
 
     public SavedData save_image() {
@@ -419,9 +452,10 @@ public static class SavedData
                     values.put(MediaStore.Images.Media.MIME_TYPE, mime_type);
                     values.put(MediaStore.Images.Media.TITLE, filename);
                     values.put("_data", filepath);
-                    contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                    Uri uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
 
                     main_activity.show_message(String.format(main_activity.getString(R.string.saved_message), filepath));
+                    return new SavedData(uri, mime_type);
                 } catch (IOException e) {
                     Log.e("Error", e.toString());
                     main_activity.show_message(String.format(main_activity.getString(R.string.save_error_message), filepath) + e.toString());
@@ -430,14 +464,15 @@ public static class SavedData
                 main_activity.show_message(main_activity.getString(R.string.prepare_save_error_message));
             }
         }
+        return null;
     }
 
 
-    final float MINIMUM_DOTS_IN_DISPLAY = 32;
+    final static float MINIMUM_DOTS_IN_DISPLAY = 32;
 
     private final Paint paint = new Paint();
 
-    private boolean image_loaded(){
+    boolean image_loaded(){
         return composer.source_bmp != null;
     }
     @Override
@@ -455,7 +490,7 @@ public static class SavedData
 
             paint.setShader(back_shader);
             paint.setStyle(Paint.Style.FILL);
-            canvas.drawRect(canvas_rect, paint);
+            canvas.drawRect(view.canvas_rect, paint);
             paint.setShader(null);
 
             paint.setStyle(Paint.Style.STROKE);
@@ -464,15 +499,15 @@ public static class SavedData
 
             Rect source_rect = composer.source_rect();
 
-            Bitmap bmp = composer.compose(view_scale, view_mode, false, paint);
+            Bitmap bmp = composer.compose(view.scale, view_mode, false, paint);
             if (bmp != null) {
-                float draw_scale = source_rect.width() * view_scale / composer.compose_rect().width();
-                int border_w = view_offset.x > 0 ? Math.round(view_offset.x) : 0;
-                int border_h = view_offset.y > 0 ? Math.round(view_offset.y) : 0;
+                float draw_scale = source_rect.width() * view.scale / composer.compose_rect().width();
+                int border_w = view.offset.x > 0 ? Math.round(view.offset.x) : 0;
+                int border_h = view.offset.y > 0 ? Math.round(view.offset.y) : 0;
 
-                Rect dst_rect = new Rect(border_w, border_h, canvas_rect.right - border_w, canvas_rect.bottom - border_h);
-                float l = view_offset.x > 0 ? 0 : -view_offset.x / draw_scale;
-                float t = view_offset.y > 0 ? 0 : -view_offset.y / draw_scale;
+                Rect dst_rect = new Rect(border_w, border_h, view.canvas_rect.right - border_w, view.canvas_rect.bottom - border_h);
+                float l = view.offset.x > 0 ? 0 : -view.offset.x / draw_scale;
+                float t = view.offset.y > 0 ? 0 : -view.offset.y / draw_scale;
                 Rect src_rect = new Rect(
                         Math.round(l),
                         Math.round(t),
@@ -489,8 +524,8 @@ public static class SavedData
                 if (cur_center != null) {
                     paint.setStyle(Paint.Style.STROKE);
                     paint.setColor(0xFFFFFF00);
-                    Point2D lt = calc_offset_pos(cur_center).sub(new Vector2D(1, 1).mul(CIRCLE_SIZE));
-                    Point2D rb = calc_offset_pos(cur_center).add(new Vector2D(1, 1).mul(CIRCLE_SIZE));
+                    Point2D lt = view.calc_offset_pos(cur_center).sub(new Vector2D(1, 1).mul(CIRCLE_SIZE));
+                    Point2D rb = view.calc_offset_pos(cur_center).add(new Vector2D(1, 1).mul(CIRCLE_SIZE));
 //                    canvas.drawCircle(center.x + offset.x, center.y + offset.y, CIRCLE_SIZE, paint);
 
                     paint.setStrokeWidth(LINE_WIDTH_BORDER);
@@ -534,21 +569,13 @@ public static class SavedData
         }
     }
 
-    private Point2D calc_offset_pos(Point2D pos) {
-        if (view_offset != null) {
-            return pos.scale(view_scale).add(view_offset);
-        } else {
-            return pos.scale(view_scale);
-        }
-    }
-
     private void offset_draw_line(float p1x, float p1y, float p2x, float p2y, Canvas canvas, Paint paint) {
         offset_draw_line(new Point2D(p1x, p1y), new Point2D(p2x, p2y), canvas, paint);
     }
 
     private void offset_draw_line(Point2D p1, Point2D p2, Canvas canvas, Paint paint) {
-        p1 = calc_offset_pos(p1);
-        p2 = calc_offset_pos(p2);
+        p1 = view.calc_offset_pos(p1);
+        p2 = view.calc_offset_pos(p2);
         canvas.drawLine(p1.x, p1.y, p2.x, p2.y, paint);
     }
 
@@ -615,7 +642,7 @@ public static class SavedData
 
     private float is_touching_circle(Point2D p1, Point2D p2) {
         Vector2D d = p1.sub(p2);
-        float len2 = d.length2() * (view_scale  * view_scale);
+        float len2 = d.length2() * (view.scale  * view.scale);
         if (len2 < CIRCLE_SIZE * CIRCLE_SIZE * TOUCH_MARGIN * TOUCH_MARGIN) {
             return len2;
         }
@@ -658,8 +685,8 @@ public static class SavedData
 
         scale_gesture_detector.onTouchEvent(event);
         gesture_detector.onTouchEvent(event);
-        if (view_offset != null) {
-            Point2D pos = new Point2D(event.getX(), event.getY()).sub(view_offset).scale(1.0f / view_scale);
+        if (view_initialized()) {
+            Point2D pos = new Point2D(event.getX(), event.getY()).sub(this.view.offset).scale(1.0f / this.view.scale);
 
             if (!view_scaling) {
                 switch (event.getAction()) {
@@ -701,18 +728,13 @@ public static class SavedData
     private static final int TAP_TIMEOUT = ViewConfiguration.getTapTimeout();
     private boolean control_visible = true;
 
-    float view_scale;
-    Range view_scale_range = new Range(1.0f);
-    Vector2D view_offset;
-    Range view_offset_range_x = new Range(0.0f);
-    Range view_offset_range_y = new Range(0.0f);
-
+/*
     public float get_view_scale() {
         return view_scale;
     }
-
+*/
     private boolean view_initialized() {
-        return canvas_rect != null;
+        return view != null;
     }
 
     private void scroll_view(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
@@ -722,60 +744,22 @@ public static class SavedData
         if(!view_initialized()){
             return;
         }
-        set_view_offset(view_offset_range_x.clamp(view_offset.x - distanceX), view_offset_range_y.clamp(view_offset.y - distanceY));
-
-    }
-
-    private void set_view_offset(float x, float y) {
-        if(!view_initialized()){
-            return;
-        }
-        view_offset = new Vector2D(view_offset_range_x.clamp(x), view_offset_range_y.clamp(y));
+        view.scroll(-distanceX, -distanceY);
         this.invalidate();
+
+
     }
 
     private void change_view_scale(float scale, float center_x, float center_y) {
-        if(!view_initialized()){
+        if (!view_initialized()) {
             return;
         }
-        float prev_view_scale = view_scale;
-        set_view_scale(view_scale * scale);
-        Point2D center = new Point2D(center_x, center_y);
-        float view_offset_x = (view_offset.x - center.x) * (view_scale / prev_view_scale) + center.x;
-        float view_offset_y = (view_offset.y - center.y) * (view_scale / prev_view_scale) + center.y;
-        view_offset = new Vector2D(view_offset_range_x.clamp(view_offset_x), view_offset_range_y.clamp(view_offset_y));
+        view.scale(scale, center_x, center_y);
 
         this.invalidate();
     }
 
     private void set_view_scale(float scale) {
-        if(!view_initialized()){
-            return;
-        }
-        Rect source_rect = composer.source_rect();
-        if (source_rect == null) {
-            return;
-        }
-        scale = view_scale_range.clamp(scale);
-        if (scale != view_scale) {
-            view_scale = scale;
-            float margin_x = source_rect.width() * view_scale - canvas_rect.width();
-            float margin_y = source_rect.height() * view_scale - canvas_rect.height();
-            if (margin_x < 0) {
-                view_offset_range_x.min = view_offset_range_x.max = -margin_x / 2.0f;
-            } else {
-                view_offset_range_x.min = -margin_x;
-                view_offset_range_x.max = 0;
-            }
-            if (margin_y < 0) {
-                view_offset_range_y.min = view_offset_range_y.max = -margin_y / 2.0f;
-            } else {
-                view_offset_range_y.min = -margin_y;
-                view_offset_range_y.max = 0;
-            }
-            view_offset = new Vector2D(view_offset_range_x.clamp(view_offset.x), view_offset_range_y.clamp(view_offset.y));
-
-        }
     }
 
     boolean view_scaling = false;
@@ -798,7 +782,7 @@ public static class SavedData
         }
         cansel_arrow_move();
         view_scaling = true;
-        view_scaling_initial_scale = view_scale;
+        view_scaling_initial_scale = view.scale;
         return true;
     }
 
@@ -844,9 +828,9 @@ public static class SavedData
 
         if(view_initialized()) {
             state.putInt(STATE_NAME_VIEW_MODE, view_mode);
-            state.putFloat(STATE_NAME_VIEW_SCALE, view_scale);
-            state.putFloat(STATE_NAME_VIEW_OFFSET_X, view_offset.x);
-            state.putFloat(STATE_NAME_VIEW_OFFSET_Y, view_offset.y);
+            state.putFloat(STATE_NAME_VIEW_SCALE, view.scale);
+            state.putFloat(STATE_NAME_VIEW_OFFSET_X, view.offset.x);
+            state.putFloat(STATE_NAME_VIEW_OFFSET_Y, view.offset.y);
 
             if (arrows != null && arrows.size() > 0) {
                 float[] s_x = new float[arrows.size()];
@@ -870,8 +854,8 @@ public static class SavedData
 
 
 
+    Uri restored_image = null;
     static class RestoredState {
-        Uri uri = null;
         int view_mode;
         float view_scale;
         float view_offset_x;
@@ -890,11 +874,10 @@ public static class SavedData
             return;
         }
 
+        restored_image = uri;
         restored_state = new RestoredState();
-
-        restored_state.uri = uri;
         restored_state.view_mode = state.getInt(STATE_NAME_VIEW_MODE, VIEW_MODE_COMPOSED);
-        restored_state.view_scale = state.getFloat(STATE_NAME_VIEW_SCALE, view_scale_range.min);
+        restored_state.view_scale = state.getFloat(STATE_NAME_VIEW_SCALE, 0);
         restored_state.view_offset_x = state.getFloat(STATE_NAME_VIEW_OFFSET_X, 0);
         restored_state.view_offset_y = state.getFloat(STATE_NAME_VIEW_OFFSET_Y, 0);
 

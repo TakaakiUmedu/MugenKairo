@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.gmail.umedutakaaki.mugenkairo"
-    android:versionCode="2" android:versionName="1.1">
+    package="com.gmail.umedutakaaki.mugenkairo">
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -16,8 +15,19 @@
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.EDIT"/>
+                <action android:name="android.intent.action.VIEW"/>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/jpeg"/>
+                <data android:mimeType="image/jeg"/>
+                <data android:mimeType="image/png"/>
+                <data android:mimeType="image/bitmap"/>
+                <data android:mimeType="image/bmp"/>
+                <data android:mimeType="image/gif"/>
             </intent-filter>
         </activity>
         <activity
@@ -25,5 +35,7 @@
             android:label="@string/title_activity_help" >
         </activity>
     </application>
+
+
 
 </manifest>

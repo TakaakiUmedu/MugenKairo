@@ -5,6 +5,7 @@
     <string name="action_help">ヘルプ</string>
     <string name="action_load">ロード</string>
     <string name="action_save">セーブ</string>
+    <string name="action_share">結果をシェア</string>
     <string name="action_original">元画像</string>
     <string name="action_composed">合成結果</string>
     <string name="action_masked">マスク結果</string>

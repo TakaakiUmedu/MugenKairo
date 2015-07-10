@@ -93,24 +93,56 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             return;
         }
         if (restored_state != null) {
-            load_target_image(restored_state.uri);
-            restored_state = null;
+            restore_state();
         }else{
             main_activity.load_image();
         }
     }
-    private boolean restore_state(){
-        if(restored_state == null){
-            return false;
+    public void load_source_image(Uri image_uri) {
+        int w = getWidth(), h = getHeight();
+        if (w == 0 || h == 0) {
+            this.restored_state = new RestoredState();
+            this.restored_state.uri = image_uri;
+            return;
         }
+        this.restored_state = null;
+        load_source_image_in_composer(image_uri);
+        if (!image_loaded()) {
+            return;
+        }
+        initialize_view(w, h);
+        initialize_arrows();
+        view_mode = VIEW_MODE_ORIGINAL;
+        composer.update_geometry_data(arrows);
+    }
+
+    private void restore_state() {
+        int w = getWidth(), h = getHeight();
+        if (w == 0 || h == 0) {
+            return;
+        }
+        RestoredState restored_state = this.restored_state;
+        this.restored_state = null;
 
         load_source_image_in_composer(restored_state.uri);
-        initialize_view(w, h);
-        arrows = restored_state.arrows;
-        view_mode = VIEW_MODE_ORIGINAL;
+        if (image_loaded()) {
+            initialize_view(w, h);
+            if (restored_state.view_scale > 0) {
+                set_view_scale(restored_state.view_scale);
+                set_view_offset(restored_state.view_offset_x, restored_state.view_offset_y);
+                if(restored_state.arrows != null) {
+                    arrows = restored_state.arrows;
+                }else {
+                    initialize_arrows();
+                }
+                view_mode = restored_state.view_mode;
+            } else {
+                initialize_arrows();
+                view_mode = VIEW_MODE_ORIGINAL;
 
-        composer.update_geometry_data(arrows);
-        invalidate();
+            }
+            composer.update_geometry_data(arrows);
+        }
     }
 
     private static float MAXIMUM_IMAGE_MEMORY_RATIO = 5f;
@@ -212,24 +244,6 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
     Rect canvas_rect = null;
 
     Uri image_uri;
-
-    public void load_source_image(Uri image_uri) {
-        int w = getWidth(), h = getHeight();
-        if (w == 0 || h == 0) {
-            this.restored_state = new RestoredState();
-            this.restored_state.uri = image_uri;
-            return;
-        }
-        this.restored_state = null;
-        load_source_image_in_composer(image_uri);
-        if (!image_loaded()) {
-            return;
-        }
-        initialize_view(w, h);
-        initialize_arrows();
-        view_mode = VIEW_MODE_ORIGINAL;
-        composer.update_geometry_data(arrows);
-    }
 
     private void load_source_image_in_composer(Uri image_uri) {
         int w = getWidth(), h = getHeight();
@@ -360,9 +374,13 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             return null;
         }
     }
+public static class SavedData
+{
+    public File file;
+    public String mime_type;
+}
 
-
-    public void save_image() {
+    public SavedData save_image() {
         Bitmap bmp = composer.compose_result(view_mode, paint);
         String ext, mime_type;
         if (get_view_mode() == R.id.action_composed) {

@@ -46,8 +46,10 @@ public class MainActivity extends AppCompatActivity {
     private void set_save_enabled() {
         if (main_view.get_view_mode() != MainView.VIEW_MODE_ORIGINAL && image_loaded) {
             item_save.setEnabled(true);
+            item_share.setEnabled(true);
         } else {
-            item_save.setEnabled(false);
+            item_save.setEnabled(true);
+            item_share.setEnabled(false);
         }
 
     }
@@ -63,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
     MainView main_view;
     MenuItem item_save;
+    MenuItem item_share;
     MenuItem item_arrow_add;
     MenuItem item_arrow_del;
     MenuItem item_original;
@@ -76,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_main, menu);
 
         item_save = menu.findItem(R.id.action_save);
+        item_share = menu.findItem(R.id.action_share);
         item_arrow_add = menu.findItem(R.id.action_arrow_add);
         item_arrow_del = menu.findItem(R.id.action_arrow_del);
         item_original = menu.findItem(R.id.action_original);
@@ -141,9 +145,23 @@ public class MainActivity extends AppCompatActivity {
             case R.id.action_exit:
                 finish();
                 return true;
+            case R.id.action_share:
+                share_image();
+                return true;
             default:
 
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void share_image(){
+        MainView saved_data = main_view.save_image();
+        if(saved_data != null) {
+            Intent intent = new Intent();
+            intent.setAction(Intent.ACTION_SEND);
+            intent.setType("image/jpg");
+            intent.putExtra(Intent.EXTRA_ORIGINATING_URI, saved_data.uri);
+            startActivity(intent);
         }
     }
 
@@ -171,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
                     if (uri == null) {
                         return;
                     } else {
-                        main_view.load_target_image(uri);
+                        main_view.load_source_image(uri);
                     }
                 }
                 break;

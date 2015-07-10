@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools" tools:context=".MainActivity">
     <item android:id="@+id/action_load" android:title="@string/action_load" app:showAsAction="never"/>
     <item android:id="@+id/action_save" android:title="@string/action_save" app:showAsAction="never" android:enabled="false"/>
+    <item android:id="@+id/action_share" android:title="@string/action_share" app:showAsAction="never" android:enabled="false"/>
     <group android:checkableBehavior="single">
         <item android:id="@+id/action_original" android:title="@string/action_original" app:showAsAction="never" android:enabled="false"/>
         <item android:id="@+id/action_composed" android:title="@string/action_composed" app:showAsAction="never" android:checked="true" android:enabled="false"/>

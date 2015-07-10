@@ -4,6 +4,7 @@
     <string name="action_help">Help</string>
     <string name="action_load">Load</string>
     <string name="action_save">Save</string>
+    <string name="action_share">Share Image</string>
     <string name="action_original">Original</string>
     <string name="action_composed">Composed</string>
     <string name="action_masked">Masked</string>

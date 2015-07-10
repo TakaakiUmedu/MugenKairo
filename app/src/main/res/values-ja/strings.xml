@@ -11,6 +11,8 @@
     <string name="action_mask">マスク</string>
     <string name="action_arrow_add">矢印を増やす</string>
     <string name="action_arrow_del">矢印を減らす</string>
+    <string name="action_exit">終了</string>
+
     <string name="name_save_dir">MugenKairo</string>
 
     <string name="initial_message">メニューから画像をロードして下さい</string>

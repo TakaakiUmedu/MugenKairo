@@ -138,6 +138,9 @@ public class MainActivity extends AppCompatActivity {
                 Intent intent = new Intent(this, HelpActivity.class);
                 startActivity(intent);
                 return true;
+            case R.id.action_exit:
+                finish();
+                return true;
             default:
 
                 return super.onOptionsItemSelected(item);
@@ -148,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
         main_view.save_image();
     }
 
-    private void load_image() {
+    void load_image() {
         Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         startActivityForResult(intent, RESULT_PICK_IMAGE_FILE);
     }
@@ -168,9 +171,7 @@ public class MainActivity extends AppCompatActivity {
                     if (uri == null) {
                         return;
                     } else {
-                        if (main_view.load_target_image(uri)) {
-                            enable_menu_items();
-                        }
+                        main_view.load_target_image(uri);
                     }
                 }
                 break;

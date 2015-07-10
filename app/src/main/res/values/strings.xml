@@ -10,6 +10,7 @@
     <string name="action_mask">Mask</string>
     <string name="action_arrow_add">Arrow+</string>
     <string name="action_arrow_del">Arrow-</string>
+    <string name="action_exit">Exit</string>
 
     <string name="name_save_dir">InfiniteCloister</string>
 

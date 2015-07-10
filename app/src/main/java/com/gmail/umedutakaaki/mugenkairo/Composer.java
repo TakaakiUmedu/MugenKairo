@@ -224,6 +224,7 @@ public class Composer {
             if (bmp2 != null) {
                 bmp2.recycle();
             }
+            source_bmp = null;
             return false;
         }
 

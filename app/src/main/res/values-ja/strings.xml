@@ -6,10 +6,13 @@
     <string name="action_load">ロード</string>
     <string name="action_save">セーブ</string>
     <string name="action_share">セーブしてシェア</string>
+
+    <string name="action_view_mode">描画モード</string>
     <string name="action_original">元画像</string>
     <string name="action_composed">合成結果</string>
     <string name="action_masked">マスク結果</string>
     <string name="action_mask">マスク</string>
+
     <string name="action_arrow_add">矢印を増やす</string>
     <string name="action_arrow_del">矢印を減らす</string>
     <string name="action_exit">終了</string>

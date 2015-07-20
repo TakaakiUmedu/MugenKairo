@@ -461,8 +461,7 @@ public class Composer {
 
     public Bitmap compose_result(int view_mode, Paint paint) {
         if (cur_center != null) {
-            Bitmap composed = compose_image(1.0f, view_mode, true, paint);
-            return composed;
+            return compose_image(1.0f, view_mode, true, paint);
         } else {
             return null;
         }
@@ -644,7 +643,7 @@ public class Composer {
 
         draw_grad_polygons(cur_draw_data_grad_width, null, scale, cur_draw_data, 0x00FFFFFF, 0xFFFFFFFF, mask.canvas, paint);
 
-        if (view_mode == VIEW_MODE_MASKED && for_save == false) {
+        if (view_mode == VIEW_MODE_MASKED && !for_save) {
             Point2D cur_scaled_center = cur_center.scale(scale);
             working.canvas.drawColor(0, PorterDuff.Mode.CLEAR);
             for (int i = 0; i < cur_draw_data.size(); i++) {

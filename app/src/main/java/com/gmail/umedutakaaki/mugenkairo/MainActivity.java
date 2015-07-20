@@ -77,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
     MenuItem item_share;
     MenuItem item_arrow_add;
     MenuItem item_arrow_del;
+    MenuItem item_view_mode;
     MenuItem item_original;
     MenuItem item_composed;
     MenuItem item_masked;
@@ -91,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
         item_share = menu.findItem(R.id.action_share);
         item_arrow_add = menu.findItem(R.id.action_arrow_add);
         item_arrow_del = menu.findItem(R.id.action_arrow_del);
+        item_view_mode = menu.findItem(R.id.action_view_mode);
         item_original = menu.findItem(R.id.action_original);
         item_composed = menu.findItem(R.id.action_composed);
         item_masked = menu.findItem(R.id.action_masked);
@@ -216,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
         }
         set_save_enabled();
         item_arrow_add.setEnabled(true);
+        item_view_mode.setEnabled(true);
         item_original.setEnabled(true);
         item_composed.setEnabled(true);
         item_masked.setEnabled(true);

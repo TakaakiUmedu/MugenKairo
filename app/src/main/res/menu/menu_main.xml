@@ -4,12 +4,16 @@
     <item android:id="@+id/action_load" android:title="@string/action_load" app:showAsAction="never"/>
     <item android:id="@+id/action_save" android:title="@string/action_save" app:showAsAction="never" android:enabled="false"/>
     <item android:id="@+id/action_share" android:title="@string/action_share" app:showAsAction="never" android:enabled="false"/>
-    <group android:checkableBehavior="single">
-        <item android:id="@+id/action_original" android:title="@string/action_original" app:showAsAction="never" android:enabled="false"/>
-        <item android:id="@+id/action_composed" android:title="@string/action_composed" app:showAsAction="never" android:checked="true" android:enabled="false"/>
-        <item android:id="@+id/action_masked" android:title="@string/action_masked" app:showAsAction="never" android:enabled="false"/>
-        <item android:id="@+id/action_mask" android:title="@string/action_mask" app:showAsAction="never" android:enabled="false"/>
-    </group>
+    <item android:id="@+id/action_view_mode" android:title="@string/action_view_mode" app:showAsAction="never" android:enabled="false">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item android:id="@+id/action_original" android:title="@string/action_original" app:showAsAction="never" android:enabled="false"/>
+                <item android:id="@+id/action_composed" android:title="@string/action_composed" app:showAsAction="never" android:checked="true" android:enabled="false"/>
+                <item android:id="@+id/action_masked" android:title="@string/action_masked" app:showAsAction="never" android:enabled="false"/>
+                <item android:id="@+id/action_mask" android:title="@string/action_mask" app:showAsAction="never" android:enabled="false"/>
+            </group>
+        </menu>
+    </item>
     <item android:id="@+id/action_arrow_add" android:title="@string/action_arrow_add" app:showAsAction="never" android:enabled="false"/>
     <item android:id="@+id/action_arrow_del" android:title="@string/action_arrow_del" app:showAsAction="never" android:enabled="false"/>
     <item android:id="@+id/action_help" android:title="@string/action_help" app:showAsAction="never" />

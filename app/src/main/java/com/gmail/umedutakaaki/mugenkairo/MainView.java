@@ -94,8 +94,6 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         }
         if (restored_image != null && restored_state != null) {
             load_source_image(restored_image, restored_state);
-        }else{
-//            main_activity.load_image();
         }
     }
 
@@ -338,7 +336,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
                 }finally{
                     input.close();
                 }
-                if (bmp == null || composer.set_source_image(bmp) == false) {
+                if (bmp == null || !composer.set_source_image(bmp)) {
                     options.inSampleSize *= 2;
                     if(bmp != null) {
                         bmp.recycle();
@@ -439,7 +437,7 @@ public static class SavedData {
                 String filepath = file_to_save.toString();
                 try {
                     FileOutputStream output = new FileOutputStream(filepath);
-                    if (ext == ".jpg") {
+                    if (ext.equals(".jpg")) {
                         bmp.compress(Bitmap.CompressFormat.JPEG, 80, output);
                     } else {
                         bmp.compress(Bitmap.CompressFormat.PNG, 100, output);
@@ -870,10 +868,6 @@ public static class SavedData {
             return;
         }
         Uri uri = Uri.parse(uri_str);
-        if (uri == null) {
-            return;
-        }
-
         restored_image = uri;
         restored_state = new RestoredState();
         restored_state.view_mode = state.getInt(STATE_NAME_VIEW_MODE, VIEW_MODE_COMPOSED);

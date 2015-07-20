@@ -224,7 +224,6 @@ public class MainActivity extends AppCompatActivity {
         item_masked.setEnabled(true);
         item_mask.setEnabled(true);
         item_composed.setChecked(true);
-        main_view.set_view_mode(R.id.action_composed);
         set_arrow_del_enabled();
 
     }

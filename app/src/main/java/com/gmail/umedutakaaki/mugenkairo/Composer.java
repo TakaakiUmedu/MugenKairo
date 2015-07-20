@@ -469,7 +469,6 @@ public class Composer {
 
     public void recompose() {
         cur_composed = null;
-
     }
 
     public Rect compose_rect(){
@@ -559,8 +558,8 @@ public class Composer {
                         src = working_buffers[(i + 1) % 2];
                         dst = working_buffers[i % 2];
                         dst.canvas.drawColor(0x00000000, PorterDuff.Mode.CLEAR);
-                        dst.canvas.drawBitmap(src.bmp, compose_rect, calc_dst_rect(tmp_scale, center), paint);
                         dst.canvas.drawBitmap(src.bmp, 0, 0, paint);
+                        dst.canvas.drawBitmap(src.bmp, compose_rect, calc_dst_rect(tmp_scale, center), paint);
                         tmp_scale *= tmp_scale;
                         if (tmp_scale == 0.0f) {
                             break;
@@ -626,40 +625,37 @@ public class Composer {
     }
 
     private void draw_mask(DrawBuffer mask, float scale, int view_mode, DrawBuffer working, boolean for_save, Paint paint) {
-        float ratio = 1.0f;
-        boolean modifying;
-        mask.canvas.drawColor(0xFFFFFFFF);
+//        mask.canvas.drawColor(0xFFFFFFFF, PorterDuff.Mode.CLEAR);
+        mask.canvas.drawColor(0x00000000, PorterDuff.Mode.CLEAR);
 
         Point2D[] center_polygon = new Point2D[cur_draw_data.size()];
         for (int i = 0; i < cur_draw_data.size(); i++) {
             DrawData data = cur_draw_data.get(i);
-            center_polygon[i] = data.p.add(data.v2).scale(scale);
+//            center_polygon[i] = data.p.add(data.v2).scale(scale);
+            center_polygon[i] = data.p.add(data.v1).scale(scale);
         }
-        paint.setColor(0x00000000);
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.MULTIPLY));
+        paint.setColor(0xFFFFFFFF);
+        paint.setXfermode(null);
         paint.setStyle(Paint.Style.FILL);
         draw_polygon(center_polygon, mask.canvas, paint);
         paint.setXfermode(null);
 
-        draw_grad_polygons(cur_draw_data_grad_width, null, scale, cur_draw_data, 0x00FFFFFF, 0xFFFFFFFF, mask.canvas, paint);
+        draw_grad_polygons(cur_draw_data_grad_width, null, scale, cur_draw_data, 0xFFFFFFFF, 0x00FFFFFF, mask.canvas, paint);
 
         if (view_mode == VIEW_MODE_MASKED && !for_save) {
             Point2D cur_scaled_center = cur_center.scale(scale);
-            working.canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+            paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.MULTIPLY));
+//            mask.canvas.drawColor(0x00000000);
             for (int i = 0; i < cur_draw_data.size(); i++) {
                 DrawData data = cur_draw_data.get(i);
-                center_polygon[i] = data.p.add(data.v1).scale(scale).scale(1.0f / cur_scale, cur_scaled_center);
+                center_polygon[i] = data.p.add(data.v2).scale(scale).scale(cur_scale, cur_scaled_center);
             }
-            paint.setColor(0xFFFFFFFF);
+            paint.setColor(0x00000000);
             paint.setStyle(Paint.Style.FILL);
-            draw_polygon(center_polygon, working.canvas, paint);
+            draw_polygon(center_polygon, mask.canvas, paint);
 
-            draw_grad_polygons(cur_draw_data_grad_width, cur_scaled_center.sub(cur_scaled_center.scale(1.0f / cur_scale)), scale / cur_scale, cur_draw_data, 0xFFFFFFFF, 0x00FFFFFF, working.canvas, paint);
-
-            paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.MULTIPLY));
-
-            mask.canvas.drawBitmap(working.bmp, 0, 0, paint);
             paint.setXfermode(null);
+            draw_grad_polygons(cur_draw_data_grad_width, cur_scaled_center.sub(cur_scaled_center.scale(cur_scale)), scale * cur_scale, cur_draw_data, 0x00FFFFFF, 0xFFFFFFFF, mask.canvas, paint);
         }
 
     }

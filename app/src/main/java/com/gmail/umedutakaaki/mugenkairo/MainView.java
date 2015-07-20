@@ -127,7 +127,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             view_mode = restored_state.view_mode;
         } else {
             initialize_arrows();
-            view_mode = VIEW_MODE_ORIGINAL;
+            view_mode = VIEW_MODE_COMPOSED;
         }
         composer.update_geometry_data(arrows);
         control_visible = true;
@@ -422,44 +422,48 @@ public static class SavedData {
             mime_type = "image/png";
         }
         if (bmp != null) {
-            File root = find_and_create_save_dir();
-            if (root != null) {
-                SimpleDateFormat filename_format = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                String filename_base = filename_format.format(new Date());
-                String filename = filename_base + ext;
-                File file_to_save = new File(root, filename);
-                int i = 0;
-                while (file_to_save.exists()) {
-                    filename = filename_base + "_" + i + ext;
-                    file_to_save = new File(root, filename);
-                    i++;
-                }
-                String filepath = file_to_save.toString();
-                try {
-                    FileOutputStream output = new FileOutputStream(filepath);
-                    if (ext.equals(".jpg")) {
-                        bmp.compress(Bitmap.CompressFormat.JPEG, 80, output);
-                    } else {
-                        bmp.compress(Bitmap.CompressFormat.PNG, 100, output);
+            try {
+                File root = find_and_create_save_dir();
+                if (root != null) {
+                    SimpleDateFormat filename_format = new SimpleDateFormat("yyyyMMdd_HHmmss");
+                    String filename_base = filename_format.format(new Date());
+                    String filename = filename_base + ext;
+                    File file_to_save = new File(root, filename);
+                    int i = 0;
+                    while (file_to_save.exists()) {
+                        filename = filename_base + "_" + i + ext;
+                        file_to_save = new File(root, filename);
+                        i++;
                     }
-                    output.close();
+                    String filepath = file_to_save.toString();
+                    try {
+                        FileOutputStream output = new FileOutputStream(filepath);
+                        if (ext.equals(".jpg")) {
+                            bmp.compress(Bitmap.CompressFormat.JPEG, 80, output);
+                        } else {
+                            bmp.compress(Bitmap.CompressFormat.PNG, 100, output);
+                        }
+                        output.close();
 
 
-                    ContentValues values = new ContentValues();
-                    ContentResolver contentResolver = main_activity.getContentResolver();
-                    values.put(MediaStore.Images.Media.MIME_TYPE, mime_type);
-                    values.put(MediaStore.Images.Media.TITLE, filename);
-                    values.put("_data", filepath);
-                    Uri uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                        ContentValues values = new ContentValues();
+                        ContentResolver contentResolver = main_activity.getContentResolver();
+                        values.put(MediaStore.Images.Media.MIME_TYPE, mime_type);
+                        values.put(MediaStore.Images.Media.TITLE, filename);
+                        values.put("_data", filepath);
+                        Uri uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
 
-                    main_activity.show_message(String.format(main_activity.getString(R.string.saved_message), filepath));
-                    return new SavedData(uri, mime_type);
-                } catch (IOException e) {
-                    Log.e("Error", e.toString());
-                    main_activity.show_message(String.format(main_activity.getString(R.string.save_error_message), filepath) + e.toString());
+                        main_activity.show_message(String.format(main_activity.getString(R.string.saved_message), filepath));
+                        return new SavedData(uri, mime_type);
+                    } catch (IOException e) {
+                        Log.e("Error", e.toString());
+                        main_activity.show_message(String.format(main_activity.getString(R.string.save_error_message), filepath) + e.toString());
+                    }
+                } else {
+                    main_activity.show_message(main_activity.getString(R.string.prepare_save_error_message));
                 }
-            } else {
-                main_activity.show_message(main_activity.getString(R.string.prepare_save_error_message));
+            }finally{
+                composer.recompose();
             }
         }
         return null;
@@ -718,6 +722,10 @@ public static class SavedData {
                         }
                         break;
                 }
+            }
+        }else{
+            if(!image_loaded() && event.getAction() == MotionEvent.ACTION_UP && event.getEventTime() - event.getDownTime() < TAP_TIMEOUT) {
+                main_activity.load_image();
             }
         }
         return true;

@@ -1,31 +1,21 @@
 package com.gmail.umedutakaaki.mugenkairo;
 
-import android.app.ActivityManager;
 import android.app.Application;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
-import android.graphics.LinearGradient;
-import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.Shader;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.res.ResourcesCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -33,25 +23,19 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.widget.Toast;
+
+import com.gmail.umedutakaaki.geometry.Point2D;
+import com.gmail.umedutakaaki.geometry.Range;
+import com.gmail.umedutakaaki.geometry.Vector2D;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Vector;
-
-import com.gmail.umedutakaaki.geometry.Vector2D;
-import com.gmail.umedutakaaki.geometry.Point2D;
-import com.gmail.umedutakaaki.geometry.Range;
 
 /**
  * Created by umedu on 2015/07/03.
@@ -92,7 +76,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
         if(w == 0 || h == 0) {
             return;
         }
-        if (restored_image != null && restored_state != null) {
+        if (restored_image != null) {
             load_source_image(restored_image, restored_state);
         }
     }
@@ -421,50 +405,54 @@ public static class SavedData {
             ext = ".png";
             mime_type = "image/png";
         }
+        SavedData saved_data = null;
         if (bmp != null) {
-            try {
-                File root = find_and_create_save_dir();
-                if (root != null) {
-                    SimpleDateFormat filename_format = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                    String filename_base = filename_format.format(new Date());
-                    String filename = filename_base + ext;
-                    File file_to_save = new File(root, filename);
-                    int i = 0;
-                    while (file_to_save.exists()) {
-                        filename = filename_base + "_" + i + ext;
-                        file_to_save = new File(root, filename);
-                        i++;
-                    }
-                    String filepath = file_to_save.toString();
-                    try {
-                        FileOutputStream output = new FileOutputStream(filepath);
-                        if (ext.equals(".jpg")) {
-                            bmp.compress(Bitmap.CompressFormat.JPEG, 80, output);
-                        } else {
-                            bmp.compress(Bitmap.CompressFormat.PNG, 100, output);
-                        }
-                        output.close();
+            saved_data = save_bmp(bmp, ext, mime_type);
+        }
+        composer.recompose();
+        invalidate();
+        return saved_data;
+    }
 
-
-                        ContentValues values = new ContentValues();
-                        ContentResolver contentResolver = main_activity.getContentResolver();
-                        values.put(MediaStore.Images.Media.MIME_TYPE, mime_type);
-                        values.put(MediaStore.Images.Media.TITLE, filename);
-                        values.put("_data", filepath);
-                        Uri uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-
-                        main_activity.show_message(String.format(main_activity.getString(R.string.saved_message), filepath));
-                        return new SavedData(uri, mime_type);
-                    } catch (IOException e) {
-                        Log.e("Error", e.toString());
-                        main_activity.show_message(String.format(main_activity.getString(R.string.save_error_message), filepath) + e.toString());
-                    }
-                } else {
-                    main_activity.show_message(main_activity.getString(R.string.prepare_save_error_message));
-                }
-            }finally{
-                composer.recompose();
+    private SavedData save_bmp(Bitmap bmp, String ext, String mime_type) {
+        File root = find_and_create_save_dir();
+        if (root != null) {
+            SimpleDateFormat filename_format = new SimpleDateFormat("yyyyMMdd_HHmmss");
+            String filename_base = filename_format.format(new Date());
+            String filename = filename_base + ext;
+            File file_to_save = new File(root, filename);
+            int i = 0;
+            while (file_to_save.exists()) {
+                filename = filename_base + "_" + i + ext;
+                file_to_save = new File(root, filename);
+                i++;
             }
+            String filepath = file_to_save.toString();
+            try {
+                FileOutputStream output = new FileOutputStream(filepath);
+                if (ext.equals(".jpg")) {
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 80, output);
+                } else {
+                    bmp.compress(Bitmap.CompressFormat.PNG, 100, output);
+                }
+                output.close();
+
+
+                ContentValues values = new ContentValues();
+                ContentResolver contentResolver = main_activity.getContentResolver();
+                values.put(MediaStore.Images.Media.MIME_TYPE, mime_type);
+                values.put(MediaStore.Images.Media.TITLE, filename);
+                values.put("_data", filepath);
+                Uri uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+
+                main_activity.show_message(String.format(main_activity.getString(R.string.saved_message), filepath));
+                return new SavedData(uri, mime_type);
+            } catch (IOException e) {
+                Log.e("Error", e.toString());
+                main_activity.show_message(String.format(main_activity.getString(R.string.save_error_message), filepath) + e.toString());
+            }
+        } else {
+            main_activity.show_message(main_activity.getString(R.string.prepare_save_error_message));
         }
         return null;
     }

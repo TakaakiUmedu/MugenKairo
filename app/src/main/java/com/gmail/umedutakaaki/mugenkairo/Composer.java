@@ -1,12 +1,6 @@
 package com.gmail.umedutakaaki.mugenkairo;
 
-import android.app.ActivityManager;
-import android.app.Application;
-import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
@@ -17,33 +11,13 @@ import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.Region;
 import android.graphics.Shader;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.res.ResourcesCompat;
-import android.util.AttributeSet;
-import android.util.Log;
-import android.view.GestureDetector;
-import android.view.MotionEvent;
-import android.view.ScaleGestureDetector;
-import android.view.View;
-import android.view.ViewConfiguration;
-import android.widget.Toast;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Vector;
-
-import com.gmail.umedutakaaki.geometry.Vector2D;
 import com.gmail.umedutakaaki.geometry.Point2D;
-import com.gmail.umedutakaaki.geometry.Range;
+import com.gmail.umedutakaaki.geometry.Vector2D;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by umedu on 2015/07/03.
@@ -268,7 +242,6 @@ public class Composer {
     Point2D cur_center;
     List<DrawData> cur_draw_data = null;
     float cur_draw_data_grad_width;
-    float cur_grad_width;
 
     Bitmap cur_composed = null;
 
@@ -350,7 +323,7 @@ public class Composer {
 
 
     private boolean calc_draw_data(ArrayList<ArrowWithAngle> sorted_arrows) {
-        cur_grad_width = default_grad_width_ratio * Math.min(source_rect.width(), source_rect.height());
+        float cur_grad_width = default_grad_width_ratio * Math.min(source_rect.width(), source_rect.height());
         ArrayList<Point2D> points = new ArrayList<Point2D>();
         Arrow arrow_s = sorted_arrows.get(sorted_arrows.size() - 1).a;
         float angle_s = sorted_arrows.get(sorted_arrows.size() - 1).t - (float) (Math.PI * 2);
@@ -359,8 +332,8 @@ public class Composer {
             Arrow arrow_e = item.a;
             float angle_e = item.t;
             float angle_s_tmp = angle_s;
-            float len_s = (arrow_s.e.sub(cur_center)).length();
-            float len_e = (arrow_e.e.sub(cur_center)).length();
+            float len_s = (arrow_s.s.sub(cur_center)).length() + cur_grad_width;
+            float len_e = (arrow_e.s.sub(cur_center)).length() + cur_grad_width;
             do {
                 float len = len_s + (len_e - len_s) * (angle_s_tmp - angle_s) / (angle_e - angle_s);
                 points.add(Point2D.point_on_circle(cur_center, len, angle_s_tmp));
@@ -379,7 +352,7 @@ public class Composer {
                     len_min = len;
                 }
             }
-            grad_width = len_min < cur_grad_width ? len_min : cur_grad_width;
+            grad_width = Math.min(len_min, cur_grad_width);
 
             modifying = false;
             if (points.size() <= 4) {

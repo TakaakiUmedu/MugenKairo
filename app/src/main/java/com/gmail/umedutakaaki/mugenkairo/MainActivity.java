@@ -1,33 +1,12 @@
 package com.gmail.umedutakaaki.mugenkairo;
 
-import android.app.Activity;
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Intent;
-import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.net.Uri;
-import android.os.Environment;
-import android.os.Handler;
-import android.provider.MediaStore;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.Window;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
-
-import java.io.*;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Timer;
 
 
 public class MainActivity extends AppCompatActivity {

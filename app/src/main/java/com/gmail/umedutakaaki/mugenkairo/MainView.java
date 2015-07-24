@@ -341,7 +341,7 @@ public class MainView extends View implements View.OnTouchListener, ScaleGesture
             composer.release_images();
         }
     }
-    static final private float IMAGE_SIZE_MIN_RATIO = 4.1f;
+    static final private float IMAGE_SIZE_MIN_RATIO = 0.1f;
 
 
 
@@ -490,6 +490,14 @@ public static class SavedData {
             Rect source_rect = composer.source_rect();
 
             Bitmap bmp = composer.compose(view.scale, view_mode, false, paint);
+            /*
+            Date start = new Date();
+            for(int i = 0; i < 10; i ++) {
+                composer.recompose();
+                composer.compose(view.scale, view_mode, false, paint);
+            }
+            long time = start.getTime() - new Date().getTime();
+            */
             if (bmp != null) {
                 float draw_scale = source_rect.width() * view.scale / composer.compose_rect().width();
                 int border_w = view.offset.x > 0 ? Math.round(view.offset.x) : 0;
@@ -863,8 +871,7 @@ public static class SavedData {
         if (uri_str == null) {
             return;
         }
-        Uri uri = Uri.parse(uri_str);
-        restored_image = uri;
+        restored_image = Uri.parse(uri_str);
         restored_state = new RestoredState();
         restored_state.view_mode = state.getInt(STATE_NAME_VIEW_MODE, VIEW_MODE_COMPOSED);
         restored_state.view_scale = state.getFloat(STATE_NAME_VIEW_SCALE, 0);

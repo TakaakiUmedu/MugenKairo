@@ -241,6 +241,7 @@ public class Composer {
     float cur_scale;
     Point2D cur_center;
     List<DrawData> cur_draw_data = null;
+    Point2D cur_draw_rect_lt = null, cur_draw_rect_rb = null;
     float cur_draw_data_grad_width;
 
     Bitmap cur_composed = null;
@@ -344,6 +345,7 @@ public class Composer {
         }
         boolean modifying = false;
         ArrayList<DrawData> draw_data = null;
+        float clip_l = 0.0f, clip_t = 0.0f, clip_r = 0.0f, clip_b = 0.0f;
         do {
             float len_min = -1;
             for (Point2D p : points) {
@@ -372,6 +374,7 @@ public class Composer {
                 Point2D p0 = points.get(points.size() - 3);
                 Point2D p1 = points.get(points.size() - 2);
                 Point2D p2 = points.get(points.size() - 1);
+                clip_l = p2.x; clip_t = p2.y; clip_r = p2.x; clip_b = p2.y;
 
                 Vector2D[] tmp = calc_corner_shifted_position(p0, p1, p2);
                 Vector2D v1 = tmp[0], v1r = tmp[1], d1s = tmp[2];
@@ -390,6 +393,10 @@ public class Composer {
                         break;
                     }
                     draw_data.add(new DrawData(p2, v2s.mul(grad_width), v2, v2r));
+                    clip_l = Math.min(clip_l, p2.x);
+                    clip_t = Math.min(clip_t, p2.y);
+                    clip_r = Math.max(clip_r, p2.x);
+                    clip_b = Math.max(clip_b, p2.y);
                     p0 = p1;
                     p1 = p2;
                     p2 = p3;
@@ -402,6 +409,8 @@ public class Composer {
         if (draw_data != null && draw_data.size() > 3) {
             cur_draw_data = draw_data;
             cur_draw_data_grad_width = grad_width;
+            cur_draw_rect_lt = new Point2D(clip_l, clip_t);
+            cur_draw_rect_rb = new Point2D(clip_r, clip_b);
             return true;
         } else {
             cur_draw_data = null;
@@ -527,17 +536,28 @@ public class Composer {
                     float tmp_scale = cur_scale;
                     DrawBuffer src = null;
                     DrawBuffer dst = null;
+                    Point2D clip_org_lt = cur_draw_rect_lt.scale(working_scale), clip_org_rb = cur_draw_rect_rb.scale(working_scale);
+                    Point2D clip_lt = clip_org_lt, clip_rb = clip_org_rb;
                     for (int i = 0; i < REPEAT_COUNT; i++) {
                         src = working_buffers[(i + 1) % 2];
                         dst = working_buffers[i % 2];
                         dst.canvas.drawColor(0x00000000, PorterDuff.Mode.CLEAR);
+
+                        dst.canvas.clipRect(clip_org_lt.x, clip_org_lt.y, clip_org_rb.x, clip_org_rb.y, Region.Op.REPLACE);
                         dst.canvas.drawBitmap(src.bmp, 0, 0, paint);
+
+                        dst.canvas.clipRect(clip_lt.x, clip_lt.y, clip_rb.x, clip_rb.y, Region.Op.REPLACE);
                         dst.canvas.drawBitmap(src.bmp, compose_rect, calc_dst_rect(tmp_scale, center), paint);
+
+                        clip_lt = clip_lt.scale(tmp_scale, center);
+                        clip_rb = clip_rb.scale(tmp_scale, center);
+
                         tmp_scale *= tmp_scale;
                         if (tmp_scale == 0.0f) {
                             break;
                         }
                     }
+                    src.canvas.clipRect(compose_rect, Region.Op.REPLACE);
                     src.canvas.drawColor(0x00000000, PorterDuff.Mode.CLEAR);
                     src.canvas.drawBitmap(source_bmp, copy_matrix, paint);
                     src.canvas.drawBitmap(dst.bmp, 0, 0, paint);
